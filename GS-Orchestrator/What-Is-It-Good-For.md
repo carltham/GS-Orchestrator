@@ -2,7 +2,7 @@
 
 ## Problem
 
-Managing 14 different projects is chaotic:
+Managing multiple different projects is chaotic:
 - **Port conflicts** — Multiple projects want port 3000
 - **No visibility** — Which projects are running? On what ports?
 - **Manual coordination** — Developers manually track which ports to use
@@ -16,7 +16,7 @@ A **standalone, always-running service** that acts as a central coordinator for 
 ### How It Works
 
 1. **Project Registration**
-   - Project registers on startup: `POST /register { name: "gsshopper", path: "/path/to/gsshopper" }`
+   - Project registers on startup: `POST /api/register { projectName: "ProjectName", path: "/path/to/project" }`
    - Orchestrator assigns ports: backend=4200, frontend=4201, etc.
    - Registry persisted to `registry.json`
 
@@ -25,16 +25,9 @@ A **standalone, always-running service** that acts as a central coordinator for 
    - No manual port management
    - No conflicts: Orchestrator guarantees unique ports
 
-3. **Service Discovery**
-   - Project queries: `GET /ports/gsshopper`
-   - Returns: `{ backend: 4200, frontend: 4201, database: 5433 }`
-   - Services know exactly where to find each other
-
-4. **Centralized Status**
-   - `GET /status` shows all 14 projects
-   - Which ones are running?
-   - What ports are allocated?
-   - Health status?
+3. **Service Discovery & Health**
+   - Health telemetry check-ins via `POST /api/health`
+   - Returns allocated ports and tickets
 
 ## Benefits
 
@@ -56,7 +49,7 @@ A **standalone, always-running service** that acts as a central coordinator for 
 - ✅ Central registry of all services
 - ✅ Easy to monitor what's running
 
-## Example: GSShopper with Orchestrator
+## Example Usage with Orchestrator
 
 ### Before (Manual)
 ```bash
@@ -71,26 +64,22 @@ export const API_URL = 'http://localhost:3000'; // What if port changed?
 
 ### After (Orchestrator)
 ```bash
-# GSShopper registers on startup
+# Project registers on startup
 POST /api/register
 {
-  "name": "gsshopper",
-  "path": "/mnt/DATA/Projects/0.present-projects/Active/GSShopper"
+  "projectName": "MyProject",
+  "path": "/mnt/DATA/Projects/Active/MyProject"
 }
 
 # Orchestrator responds
 {
-  "backend": 4200,
-  "frontend": 4201,
-  "database": 5433
+  "ports": {
+    "backend": 4200,
+    "frontend": 4201,
+    "database": 5433
+  },
+  "ticket": "ticket-12345678"
 }
-
-# Frontend queries Orchestrator at startup
-GET /api/ports/gsshopper
-// Receives: { backend: 4200, frontend: 4201, database: 5433 }
-
-// Frontend automatically connects to:
-export const API_URL = 'http://localhost:4200'; // Dynamic!
 ```
 
 ## Architecture
@@ -98,30 +87,21 @@ export const API_URL = 'http://localhost:4200'; // Dynamic!
 ```
 ┌─────────────────────────────────────────────────┐
 │  Orchestrator (always running on :9000)         │
-│  - Central registry of all 14 projects          │
+│  - Central registry of all projects             │
 │  - Port allocator (prevents conflicts)          │
-│  - Service discovery endpoint                   │
+│  - Health monitoring & service discovery        │
 └─────────────────────────────────────────────────┘
         ↑           ↑           ↑
         |           |           |
-   Registers    Queries      Queries
-   on startup   ports        status
+   Registers    Sends        Checks
+   on startup   health       availability
         |           |           |
    ┌────┴────┐ ┌────┴────┐ ┌────┴────┐
    │ Project │ │ Project │ │ Project │
-   │   1     │ │   2     │ │   14    │
+   │   1     │ │   2     │ │   N     │
    └─────────┘ └─────────┘ └─────────┘
 ```
 
-## Current Scope (GSShopper-First)
-
-Starting with only what GSShopper needs:
-1. Register GSShopper project → get port assignments
-2. Query ports for service discovery
-3. Status endpoint to see what's running
-
-Will add more projects as needed.
-
 ---
 
-**Status:** Foundation ready for Contract-Driven Development testing.
+**Status:** Foundation ready for multi-project service coordination.

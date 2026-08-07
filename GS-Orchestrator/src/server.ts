@@ -5,6 +5,7 @@
 
 import express, { Express, Request, Response } from 'express';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { PortAllocator } from './services/portAllocator';
 import { Registry } from './services/registry';
 
@@ -14,14 +15,7 @@ const PORT = 9000;
 // Initialize services
 const registryPath = path.join(__dirname, '..', 'registry.json');
 const registry = new Registry(registryPath);
-const portAllocator = new PortAllocator();
-
-// Restore state from registry
-const registryState = registry.getState();
-portAllocator.restoreState({
-  allocatedPorts: registryState.projects as any, // Simplified for now
-  nextPortBase: registryState.nextPortBase,
-});
+const portAllocator = new PortAllocator(registry);
 
 // Middleware
 app.use(express.json());
@@ -41,42 +35,52 @@ app.get('/health', (req: Request, res: Response) => {
  * 
  * Request:
  * {
- *   "project": "GSShopper",
- *   "path": "/path/to/gsshopper"
+ *   "projectName": "MyProject",
+ *   "path": "/path/to/myproject"
  * }
  * 
  * Response:
  * {
- *   "backend": 4200,
- *   "frontend": 4201,
- *   "database": 5433
+ *   "ports": {
+ *     "backend": 4200,
+ *     "frontend": 4201,
+ *     "database": 5433
+ *   },
+ *   "timestamp": "2026-08-08T10:00:00Z"
  * }
  */
 app.post('/api/register', (req: Request, res: Response) => {
   try {
-    const { project, path: projectPath } = req.body;
+    // Accept both projectName and project for compatibility
+    const projectName = req.body.projectName || req.body.project;
+    const projectPath = req.body.path;
 
-    if (!project || !projectPath) {
+    if (!projectName || !projectPath) {
       return res.status(400).json({
-        error: 'Missing required fields: project, path',
+        error: 'Missing required fields: projectName, path',
       });
     }
 
     // Check if already registered
-    const existing = registry.getProject(project);
+    const existing = registry.getProject(projectName);
     if (existing) {
+      console.log(`✅ Project "${projectName}" already registered, returning existing ports`);
       return res.json({
-        message: 'Project already registered',
-        backend: existing.ports.backend,
-        frontend: existing.ports.frontend,
-        database: existing.ports.database || 5433,
+        ports: {
+          backend: existing.ports.backend,
+          frontend: existing.ports.frontend,
+          database: existing.ports.database || 5433,
+        },
+        ticket: existing.ticket,
+        timestamp: existing.registeredAt,
       });
     }
 
     // Allocate ports
-    const backend = portAllocator.allocatePort(project, 'backend');
-    const frontend = portAllocator.allocatePort(project, 'frontend');
-    const database = 5433; // Fixed database port for now
+    const backend = portAllocator.allocatePort(projectName, 'backend');
+    const frontend = portAllocator.allocatePort(projectName, 'frontend');
+    const database = 5433; // Fixed database port
+    const ticket = `ticket-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
     const ports = {
       backend,
@@ -85,13 +89,13 @@ app.post('/api/register', (req: Request, res: Response) => {
     };
 
     // Register in registry
-    registry.registerProject(project, projectPath, ports);
+    registry.registerProject(projectName, projectPath, ports, ticket);
 
+    console.log(`✨ Project "${projectName}" registered with ports: ${backend}, ${frontend}`);
     res.status(201).json({
-      message: 'Project registered successfully',
-      backend,
-      frontend,
-      database,
+      ports,
+      ticket,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -103,105 +107,65 @@ app.post('/api/register', (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/ports/:project
- * Get ports for a specific project
- * 
- * Response:
- * {
- *   "backend": 4200,
- *   "frontend": 4201,
- *   "database": 5433
- * }
+ * GET /api/health
+ * Health check endpoint for orchestrator availability check
  */
-app.get('/api/ports/:project', (req: Request, res: Response) => {
-  try {
-    const { project } = req.params;
-
-    const projectEntry = registry.getProject(project);
-    if (!projectEntry) {
-      return res.status(404).json({
-        error: `Project "${project}" not found in registry`,
-      });
-    }
-
-    res.json({
-      backend: projectEntry.ports.backend,
-      frontend: projectEntry.ports.frontend,
-      database: projectEntry.ports.database || 5433,
-    });
-  } catch (error) {
-    console.error('Ports query error:', error);
-    res.status(500).json({
-      error: 'Failed to retrieve ports',
-      details: error instanceof Error ? error.message : String(error),
-    });
-  }
+app.get('/api/health', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
 });
 
 /**
- * GET /api/status
- * Get status of all registered projects
+ * POST /api/health
+ * Receive health report from a project
  * 
- * Response:
+ * Request:
  * {
- *   "projects": [
- *     { "name": "GSShopper", "status": "running", "ports": {...} },
- *     ...
- *   ]
+ *   "projectName": "MyProject",
+ *   "health": {
+ *     "status": "ok",
+ *     "backendStatus": true,
+ *     "frontendStatus": true,
+ *     "uptimeSeconds": 3600,
+ *     "ticket": "ticket-..."
+ *   },
+ *   "timestamp": "2026-08-08T10:00:00Z"
  * }
+ * 
+ * Response: 200 OK (empty or minimal)
  */
-app.get('/api/status', (req: Request, res: Response) => {
+app.post('/api/health', (req: Request, res: Response) => {
   try {
-    const allProjects = registry.getAllProjects();
+    const { projectName, health, timestamp } = req.body;
 
-    const projects = Object.values(allProjects).map((project) => ({
-      name: project.name,
-      status: project.status,
-      ports: project.ports,
-      registeredAt: project.registeredAt,
-      pid: project.pid,
-    }));
+    if (!projectName) {
+      return res.status(400).json({
+        error: 'Missing required field: projectName',
+      });
+    }
 
-    res.json({
-      total: projects.length,
-      projects,
+    const projectEntry = registry.getProject(projectName);
+    if (!projectEntry) {
+      console.warn(`⚠️ Health report from unregistered project "${projectName}"`);
+      return res.status(404).json({
+        error: `Project "${projectName}" not found`,
+      });
+    }
+
+    // Update project status with health info
+    if (health) {
+      projectEntry.status = health.status === 'ok' ? 'running' : 'stopped';
+    }
+
+    console.log(`💓 Health report from "${projectName}": ${health?.status || 'unknown'} (uptime: ${health?.uptimeSeconds}s)`);
+
+    res.status(200).json({
+      received: true,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Status query error:', error);
+    console.error('Health report error:', error);
     res.status(500).json({
-      error: 'Failed to retrieve status',
-      details: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
-
-/**
- * GET /api/status/:project
- * Get status of a specific project
- */
-app.get('/api/status/:project', (req: Request, res: Response) => {
-  try {
-    const { project } = req.params;
-
-    const projectEntry = registry.getProject(project);
-    if (!projectEntry) {
-      return res.status(404).json({
-        error: `Project "${project}" not found`,
-      });
-    }
-
-    res.json({
-      name: projectEntry.name,
-      status: projectEntry.status,
-      ports: projectEntry.ports,
-      registeredAt: projectEntry.registeredAt,
-      pid: projectEntry.pid,
-    });
-  } catch (error) {
-    console.error('Project status error:', error);
-    res.status(500).json({
-      error: 'Failed to retrieve project status',
+      error: 'Failed to process health report',
       details: error instanceof Error ? error.message : String(error),
     });
   }
@@ -211,10 +175,8 @@ app.get('/api/status/:project', (req: Request, res: Response) => {
 app.listen(PORT, () => {
   console.log(`🎯 GS-Orchestrator running on http://localhost:${PORT}`);
   console.log(`📋 Registry: ${registryPath}`);
-  console.log(`\nEndpoints:`);
-  console.log(`  POST   /api/register         - Register a project`);
-  console.log(`  GET    /api/ports/:project   - Get project ports`);
-  console.log(`  GET    /api/status           - Get all projects status`);
-  console.log(`  GET    /api/status/:project  - Get specific project status`);
-  console.log(`  GET    /health               - Health check`);
+  console.log(`\nSupported Endpoints:`);
+  console.log(`  POST   /api/register   - Register a project and allocate ports`);
+  console.log(`  POST   /api/health     - Receive health report from project`);
+  console.log(`  GET    /health         - Health check`);
 });

@@ -1,5 +1,5 @@
 {
-  "name": "orchestrator",
+  "name": "gs-orchestrator",
   "version": "1.0.0",
   "description": "Centralized orchestrator for managing 14 projects - handles port allocation, service discovery, and project status",
   "main": "dist/server.js",

@@ -13,6 +13,7 @@ export interface ProjectEntry {
   ports: Record<string, number>;
   status: 'running' | 'stopped';
   pid?: number;
+  ticket?: string;
 }
 
 export interface RegistryData {
@@ -23,106 +24,117 @@ export interface RegistryData {
 
 export class Registry {
   private registryPath: string;
-  private data: RegistryData;
 
   constructor(registryPath: string) {
     this.registryPath = registryPath;
-    this.data = this.load();
+    this.ensureFileExists();
   }
 
   /**
-   * Load registry from disk
+   * Ensure registry file and parent folder exist on disk
    */
-  private load(): RegistryData {
-    try {
-      if (fs.existsSync(this.registryPath)) {
-        const content = fs.readFileSync(this.registryPath, 'utf-8');
-        return JSON.parse(content);
-      }
-    } catch (error) {
-      console.error('Error loading registry:', error);
-    }
-
-    return {
+  private ensureFileExists(): RegistryData {
+    const defaultData: RegistryData = {
       projects: {},
       nextPortBase: 4200,
       lastUpdated: new Date().toISOString(),
     };
-  }
 
-  /**
-   * Save registry to disk
-   */
-  private save(): void {
     try {
-      this.data.lastUpdated = new Date().toISOString();
       const dir = path.dirname(this.registryPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(this.registryPath, JSON.stringify(this.data, null, 2));
+
+      if (!fs.existsSync(this.registryPath)) {
+        fs.writeFileSync(this.registryPath, JSON.stringify(defaultData, null, 2));
+        return defaultData;
+      }
+
+      const content = fs.readFileSync(this.registryPath, 'utf-8');
+      return JSON.parse(content);
+    } catch (error) {
+      console.error('Error reading/ensuring registry:', error);
+      return defaultData;
+    }
+  }
+
+  /**
+   * Always load fresh data directly from disk
+   */
+  private load(): RegistryData {
+    return this.ensureFileExists();
+  }
+
+  /**
+   * Save updated data directly to disk
+   */
+  private save(data: RegistryData): void {
+    try {
+      data.lastUpdated = new Date().toISOString();
+      const dir = path.dirname(this.registryPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(this.registryPath, JSON.stringify(data, null, 2));
     } catch (error) {
       console.error('Error saving registry:', error);
     }
   }
 
   /**
-   * Register a new project
+   * Register a new project directly to disk
    */
-  registerProject(name: string, projectPath: string, ports: Record<string, number>): ProjectEntry {
+  registerProject(name: string, projectPath: string, ports: Record<string, number>, ticket?: string): ProjectEntry {
+    const data = this.load();
+
     const entry: ProjectEntry = {
       name,
       path: projectPath,
       registeredAt: new Date().toISOString(),
       ports,
       status: 'running',
+      ticket,
     };
 
-    this.data.projects[name] = entry;
-    this.save();
+    data.projects[name] = entry;
+    this.save(data);
 
     return entry;
   }
 
   /**
-   * Get project entry
+   * Get project entry directly from disk
    */
   getProject(name: string): ProjectEntry | undefined {
-    return this.data.projects[name];
+    const data = this.load();
+    return data.projects[name];
   }
 
   /**
-   * Get all projects
+   * Update project path directly on disk
    */
-  getAllProjects(): Record<string, ProjectEntry> {
-    return this.data.projects;
-  }
-
-  /**
-   * Update project status
-   */
-  updateProjectStatus(name: string, status: 'running' | 'stopped', pid?: number): void {
-    if (this.data.projects[name]) {
-      this.data.projects[name].status = status;
-      if (pid !== undefined) {
-        this.data.projects[name].pid = pid;
-      }
-      this.save();
+  updateProjectPath(name: string, projectPath: string): void {
+    const data = this.load();
+    if (data.projects[name]) {
+      data.projects[name].path = projectPath;
+      this.save(data);
     }
   }
 
   /**
-   * Update next port base
+   * Update next port base directly on disk
    */
   updateNextPortBase(nextBase: number): void {
-    this.data.nextPortBase = nextBase;
-    this.save();
+    const data = this.load();
+    data.nextPortBase = nextBase;
+    this.save(data);
   }
 
   /**
-   * Get registry state
+   * Get fresh registry state directly from disk
    */
   getState(): RegistryData {
-    return this.data;
+    return this.load();
   }
 }
