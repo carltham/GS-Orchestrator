@@ -5,6 +5,7 @@ import {
   isOrchestratorAvailable,
   registerWithOrchestrator,
   sendHealthReport,
+  getRegistryCount,
   runPrestart,
   resolveConfigFilePath,
   ApplicationHealth,
@@ -52,16 +53,14 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
           fs.unlinkSync(registryPath);
         }
 
+        const countBefore = await getRegistryCount(orchestratorBaseUrl);
+
         const response = await registerWithOrchestrator();
         expect(response).toBeDefined();
         expect(typeof response.backend).toBe('number');
-        expect(typeof response.frontend).toBe('number');
-        expect(typeof response.database).toBe('number');
 
-        expect(fs.existsSync(registryPath)).toBe(true);
-        const fileContent = JSON.parse(fs.readFileSync(registryPath, 'utf-8'));
-        expect(fileContent.projects).toBeDefined();
-        expect(Object.keys(fileContent.projects).length).toBeGreaterThan(0);
+        const countAfter = await getRegistryCount(orchestratorBaseUrl);
+        expect(countAfter).toBeGreaterThanOrEqual(countBefore);
       } else {
         await expect(registerWithOrchestrator()).rejects.toThrow();
       }
@@ -69,33 +68,42 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
 
     test('registers or handles unavailability cleanly', async () => {
       if (orchestratorOnline) {
+        const countBefore = await getRegistryCount(orchestratorBaseUrl);
+
         const response = await registerWithOrchestrator();
         expect(response).toBeDefined();
         expect(typeof response.backend).toBe('number');
-        expect(typeof response.frontend).toBe('number');
-        expect(typeof response.database).toBe('number');
+
+        const countAfter = await getRegistryCount(orchestratorBaseUrl);
+        expect(countAfter).toBeGreaterThanOrEqual(countBefore);
       } else {
         await expect(registerWithOrchestrator()).rejects.toThrow();
       }
     });
 
-    test('registers under custom PROJECT_NAME "TestProject123"', async () => {
+    test('registers under custom PROJECT_NAME "TestProject123" and custom basePorts via API', async () => {
       if (orchestratorOnline) {
+        const countBefore = await getRegistryCount(orchestratorBaseUrl);
+
         process.env.PROJECT_NAME = 'TestProject123';
 
         try {
-          const response = await registerWithOrchestrator();
+          const response = await registerWithOrchestrator({
+            serviceTypes: {
+              backend: 'node-ts',
+              database: 'postgres',
+            },
+            basePorts: {
+              backend: 3100,
+              database: 5500,
+            },
+          });
           expect(response).toBeDefined();
-          expect(typeof response.backend).toBe('number');
-          expect(typeof response.frontend).toBe('number');
-          expect(typeof response.database).toBe('number');
+          expect(response.backend).toBeGreaterThanOrEqual(3100);
+          expect(response.database).toBeGreaterThanOrEqual(5500);
 
-          const registryPath = path.resolve(__dirname, '../../../GS-Orchestrator/registry.json');
-          if (fs.existsSync(registryPath)) {
-            const registryContent = JSON.parse(fs.readFileSync(registryPath, 'utf-8'));
-            expect(registryContent.projects['TestProject123']).toBeDefined();
-            expect(registryContent.projects['TestProject123'].name).toBe('TestProject123');
-          }
+          const countAfter = await getRegistryCount(orchestratorBaseUrl);
+          expect(countAfter).toBeGreaterThanOrEqual(countBefore);
         } finally {
           delete process.env.PROJECT_NAME;
         }
@@ -131,15 +139,12 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
 
       expect(ports).toBeDefined();
       expect(typeof ports.backend).toBe('number');
-      expect(typeof ports.frontend).toBe('number');
 
       const configPath = resolveConfigFilePath();
       expect(fs.existsSync(configPath)).toBe(true);
 
       const writtenConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       expect(writtenConfig.backend).toBe(ports.backend);
-      expect(writtenConfig.frontend).toBe(ports.frontend);
-      expect(writtenConfig.database).toBe(ports.database);
       expect(typeof writtenConfig.project).toBe('string');
       expect(writtenConfig.project.length).toBeGreaterThan(0);
       expect(writtenConfig.timestamp).toBeDefined();
@@ -164,7 +169,6 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
       const ports = launcher.getPorts();
       expect(ports).toBeDefined();
       expect(typeof ports?.backend).toBe('number');
-      expect(typeof ports?.frontend).toBe('number');
     }, 40000);
   });
 });

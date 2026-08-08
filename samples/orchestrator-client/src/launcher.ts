@@ -50,7 +50,11 @@ export class OrchestratedLauncher {
     return false;
   }
 
-  private async startBackend(port: number): Promise<void> {
+  private async startBackend(port?: number): Promise<void> {
+    if (!port) {
+      console.log('⏩ Skipping backend startup (no backend port provided)');
+      return;
+    }
     console.log(`⏳ Starting Backend on port ${port}...`);
     this.backendProcess = spawn('npm', ['run', 'dev:backend'], {
       stdio: 'ignore',
@@ -67,7 +71,11 @@ export class OrchestratedLauncher {
     }
   }
 
-  private async startFrontend(port: number): Promise<void> {
+  private async startFrontend(port?: number): Promise<void> {
+    if (!port) {
+      console.log('⏩ Skipping frontend startup (no frontend port provided)');
+      return;
+    }
     console.log(`⏳ Starting Frontend on port ${port}...`);
     this.frontendProcess = spawn('npm', ['run', 'dev:frontend'], {
       stdio: 'ignore',
@@ -80,7 +88,7 @@ export class OrchestratedLauncher {
 
   private startHeartbeatLoop(ticket?: string): void {
     const sendPing = async () => {
-      const backendHealthy = this.ports
+      const backendHealthy = this.ports && this.ports.backend
         ? await this.checkHttpHealth(`http://localhost:${this.ports.backend}/health`)
         : false;
 

@@ -7,13 +7,34 @@ import express, { Express, Request, Response } from 'express';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { PortAllocator } from './services/portAllocator';
-import { Registry } from './services/registry';
+import { Registry } from './services/registryHandler';
 
 const app: Express = express();
 const PORT = 9000;
 
+// Dynamic self-detection of orchestrator's own project name via git root directory
+function detectSelfProjectName(): string {
+  try {
+    let currentDir = __dirname;
+    while (currentDir !== path.parse(currentDir).root) {
+      if (path.basename(currentDir) === 'GS-Orchestrator' || path.basename(currentDir) === 'gs-orchestrator') {
+        return path.basename(currentDir);
+      }
+      if (require('fs').existsSync(path.join(currentDir, '.git'))) {
+        return path.basename(currentDir);
+      }
+      currentDir = path.dirname(currentDir);
+    }
+  } catch (err) {
+    // Fallback
+  }
+  return 'GS-Orchestrator';
+}
+
+const SELF_PROJECT_NAME = detectSelfProjectName();
+
 // Initialize services
-const registryPath = path.join(__dirname, '..', 'registry.json');
+const registryPath = path.join(__dirname, '..', 'dist', 'registry.json');
 const registry = new Registry(registryPath);
 const portAllocator = new PortAllocator(registry);
 
@@ -64,36 +85,68 @@ app.post('/api/register', (req: Request, res: Response) => {
     // Check if already registered
     const existing = registry.getProject(projectName);
     if (existing) {
-      console.log(`✅ Project "${projectName}" already registered, returning existing ports`);
+      console.log(`✅ Project "${projectName}" already registered, returning existing components`);
+
+      // Reconstruct simple ports map from components map (e.g., "backend::node-ts" -> "backend": port)
+      const ports: Record<string, number> = {};
+      for (const [compKey, allocatedPort] of Object.entries(existing.components)) {
+        const serviceKey = compKey.split('::')[0];
+        ports[serviceKey] = allocatedPort;
+      }
+
       return res.json({
-        ports: {
-          backend: existing.ports.backend,
-          frontend: existing.ports.frontend,
-          database: existing.ports.database || 5433,
-        },
+        ports,
+        components: existing.components,
         ticket: existing.ticket,
         timestamp: existing.registeredAt,
       });
     }
 
-    // Allocate ports
-    const backend = portAllocator.allocatePort(projectName, 'backend');
-    const frontend = portAllocator.allocatePort(projectName, 'frontend');
-    const database = 5433; // Fixed database port
+    // Accept optional server types & base ports sent from client
+    const serviceTypes: Record<string, string> = req.body.serviceTypes || {};
+    const basePorts: Record<string, number> = req.body.basePorts || {};
+
+    // Fall back to legacy parameters or standard default backend if serviceTypes is empty
+    if (Object.keys(serviceTypes).length === 0) {
+      if (req.body.backendType) serviceTypes.backend = req.body.backendType;
+      if (req.body.frontendType) serviceTypes.frontend = req.body.frontendType;
+      if (req.body.databaseType) serviceTypes.database = req.body.databaseType;
+      if (Object.keys(serviceTypes).length === 0) {
+        serviceTypes.backend = 'node-ts';
+      }
+    }
+
+    // Dynamically allocate ports ONLY for services specified in serviceTypes
+    const ports: Record<string, number> = {};
+    const components: Record<string, number> = {};
+
+    // Special case: Orchestrator itself self-detects on register call and assigns itself port 9000
+    if (projectName === SELF_PROJECT_NAME) {
+      ports['backend'] = 9000;
+      components['backend::node-ts'] = 9000;
+    } else {
+      for (const [serviceKey, serverType] of Object.entries(serviceTypes)) {
+        const customBase = basePorts[serviceKey];
+        const allocatedPort = portAllocator.allocatePort(
+          projectName,
+          serviceKey,
+          serverType,
+          customBase
+        );
+        ports[serviceKey] = allocatedPort;
+        components[`${serviceKey}::${serverType}`] = allocatedPort;
+      }
+    }
+
     const ticket = `ticket-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
-    const ports = {
-      backend,
-      frontend,
-      database,
-    };
-
     // Register in registry
-    registry.registerProject(projectName, projectPath, ports, ticket);
+    registry.registerProject(projectName, projectPath, components, ticket);
 
-    console.log(`✨ Project "${projectName}" registered with ports: ${backend}, ${frontend}`);
+    console.log(`✨ Project "${projectName}" registered with components: ${JSON.stringify(components)}`);
     res.status(201).json({
       ports,
+      components,
       ticket,
       timestamp: new Date().toISOString(),
     });
@@ -104,6 +157,15 @@ app.post('/api/register', (req: Request, res: Response) => {
       details: error instanceof Error ? error.message : String(error),
     });
   }
+});
+
+/**
+ * GET /api/count
+ * Get total count of registered projects in registry
+ */
+app.get('/api/count', (req: Request, res: Response) => {
+  const count = registry.getProjectCount();
+  res.status(200).json({ count });
 });
 
 /**

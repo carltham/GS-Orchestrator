@@ -1,6 +1,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { spawn } from 'child_process';
 
 export interface OrchestratorResponse {
   backend: number;
@@ -41,12 +42,12 @@ function findProjectRoot(currentDir: string = process.cwd()): string {
   return currentDir;
 }
 
-function detectProjectName(): string {
+function detectProjectName(currentDir: string = process.cwd()): string {
   if (process.env.PROJECT_NAME?.trim()) {
     return process.env.PROJECT_NAME.trim();
   }
 
-  const rootDir = findProjectRoot();
+  const rootDir = findProjectRoot(currentDir);
   return path.basename(rootDir);
 }
 
@@ -59,21 +60,186 @@ export function resolveConfigDir(): string {
     return path.resolve(configuredDir);
   }
 
-  // Resolves to calling project's root config directory (relative to CWD)
-  return path.resolve(process.cwd(), 'config');
+  // Resolves to calling project's root config directory
+  const rootDir = findProjectRoot(process.cwd());
+  return path.resolve(rootDir, 'config');
 }
 
 export function resolveConfigFilePath(): string {
   return path.join(resolveConfigDir(), 'app-config.json');
 }
 
-export async function registerWithOrchestrator(): Promise<OrchestratorResponse> {
+function detectComponentsAndFrameworks(projectDir: string = process.cwd()): ServiceTypesConfig {
+  const detected: ServiceTypesConfig = {};
+
+  try {
+    const rootDir = findProjectRoot(projectDir);
+    const pkgPath = path.join(rootDir, 'package.json');
+    let pkg: any = {};
+    if (fs.existsSync(pkgPath)) {
+      pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    }
+
+    const scripts = pkg.scripts || {};
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+
+    // Helper to search recursively in workspace directories
+    const hasFileInWorkspace = (filename: string): boolean => {
+      // Direct root check
+      if (fs.existsSync(path.join(rootDir, filename))) return true;
+
+      const checkRecursive = (dir: string, depth: number): boolean => {
+      if (depth > 5) return false;
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.name === 'node-modules' || entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git' || entry.name === 'orchestrator-client' || entry.name === 'coverage') {
+            continue;
+          }
+          const fullPath = path.join(dir, entry.name);
+          if (entry.name === filename) {
+            return true;
+          }
+          if (entry.isDirectory()) {
+            if (fs.existsSync(path.join(fullPath, filename))) {
+              return true;
+            }
+            if (checkRecursive(fullPath, depth + 1)) {
+              return true;
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+      return false;
+    };
+
+      return checkRecursive(rootDir, 1);
+    };
+
+    // Inspect workspace root package.json AND any subfolder package.json files
+    let combinedDeps: Record<string, string> = { ...deps };
+    let combinedScripts: Record<string, string> = { ...scripts };
+
+    const scanPackageJsons = (dir: string, depth: number) => {
+      if (depth > 5) return;
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git' || entry.name === 'orchestrator-client' || entry.name === 'coverage') continue;
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            const subPkgPath = path.join(fullPath, 'package.json');
+            if (fs.existsSync(subPkgPath)) {
+              try {
+                const subPkg = JSON.parse(fs.readFileSync(subPkgPath, 'utf-8'));
+                if (subPkg.dependencies) Object.assign(combinedDeps, subPkg.dependencies);
+                if (subPkg.devDependencies) Object.assign(combinedDeps, subPkg.devDependencies);
+                if (subPkg.scripts) Object.assign(combinedScripts, subPkg.scripts);
+              } catch (e) {}
+            }
+            scanPackageJsons(fullPath, depth + 1);
+          }
+        }
+      } catch (e) {}
+    };
+    scanPackageJsons(rootDir, 1);
+
+    // 1. Detect Frontend
+    if (hasFileInWorkspace('angular.json')) {
+      detected.frontend = 'angular';
+    } else if (hasFileInWorkspace('vite.config.ts') || hasFileInWorkspace('vite.config.js')) {
+      detected.frontend = 'vite';
+    } else if (hasFileInWorkspace('next.config.js') || hasFileInWorkspace('next.config.ts')) {
+      detected.frontend = 'react';
+    } else if (combinedScripts['dev:frontend'] || combinedScripts['start:frontend'] || combinedDeps['@angular/core'] || combinedDeps['react'] || combinedDeps['vue']) {
+      detected.frontend = 'frontend';
+    }
+
+    // 2. Detect Backend
+    if (hasFileInWorkspace('src/server.ts') || hasFileInWorkspace('src/server.js') || combinedScripts['dev:backend'] || combinedScripts['start:backend'] || combinedScripts['server'] || combinedDeps['express'] || combinedDeps['fastify'] || combinedDeps['@nestjs/core'] || combinedDeps['typescript']) {
+      detected.backend = 'node-ts';
+    } else if (hasFileInWorkspace('requirements.txt') || hasFileInWorkspace('Pipfile') || hasFileInWorkspace('main.py')) {
+      detected.backend = 'python';
+    }
+
+    // 3. Detect Database
+    if (hasFileInWorkspace('prisma/schema.prisma') || hasFileInWorkspace('docker-compose.yml') || hasFileInWorkspace('docker-compose.dev.yml') || combinedDeps['pg'] || combinedDeps['typeorm'] || combinedDeps['knex']) {
+      detected.database = 'postgres';
+    }
+  } catch (err) {
+    // Ignore detection errors, fallback handles defaults
+  }
+
+  return detected;
+}
+
+export interface ServiceTypesConfig {
+  backend?: string;
+  frontend?: string;
+  database?: string;
+}
+
+export interface BasePortsConfig {
+  backend?: number;
+  frontend?: number;
+  database?: number;
+}
+
+export interface RegistrationOptions {
+  serviceTypes?: ServiceTypesConfig;
+  basePorts?: BasePortsConfig;
+}
+
+export async function registerWithOrchestrator(
+  options?: ServiceTypesConfig | RegistrationOptions
+): Promise<OrchestratorResponse> {
   const projectName = detectProjectName();
+
+  let serviceTypesParam: ServiceTypesConfig | undefined;
+  let basePortsParam: BasePortsConfig | undefined;
+
+  if (options) {
+    if ('serviceTypes' in options || 'basePorts' in options) {
+      const regOpts = options as RegistrationOptions;
+      serviceTypesParam = regOpts.serviceTypes;
+      basePortsParam = regOpts.basePorts;
+    } else {
+      serviceTypesParam = options as ServiceTypesConfig;
+    }
+  }
+
+  // Inspect workspace directory for components if not explicitly provided
+  const autoDetected = serviceTypesParam ? {} : detectComponentsAndFrameworks(process.cwd());
+
+  // Build serviceTypes from parameters, env vars, or auto-detection
+  const targetServiceTypes: ServiceTypesConfig = {
+    ...autoDetected,
+    ...serviceTypesParam,
+  };
+
+  if (!targetServiceTypes.backend && process.env.BACKEND_SERVICE_TYPE) {
+    targetServiceTypes.backend = process.env.BACKEND_SERVICE_TYPE;
+  }
+  if (!targetServiceTypes.frontend && process.env.FRONTEND_SERVICE_TYPE) {
+    targetServiceTypes.frontend = process.env.FRONTEND_SERVICE_TYPE;
+  }
+  if (!targetServiceTypes.database && process.env.DATABASE_SERVICE_TYPE) {
+    targetServiceTypes.database = process.env.DATABASE_SERVICE_TYPE;
+  }
+
+  // Fallback to standard full-stack defaults if nothing detected or configured
+  if (Object.keys(targetServiceTypes).length === 0) {
+    targetServiceTypes.backend = 'node-ts';
+  }
 
   return new Promise((resolve, reject) => {
     const postData = JSON.stringify({
       projectName: projectName,
       path: process.cwd(),
+      serviceTypes: targetServiceTypes,
+      basePorts: basePortsParam,
     });
 
     const options = {
@@ -166,6 +332,55 @@ export async function sendHealthReport(health: ApplicationHealth, targetUrl?: st
   });
 }
 
+export async function getRegistryCount(baseUrl?: string): Promise<number> {
+  let hostname = ORCHESTRATOR_HOST;
+  let port = ORCHESTRATOR_PORT;
+
+  if (baseUrl) {
+    try {
+      const urlObj = new URL(baseUrl);
+      hostname = urlObj.hostname;
+      port = parseInt(urlObj.port || '80', 10);
+    } catch (err) {
+      // use defaults
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname,
+      port,
+      path: '/api/count',
+      method: 'GET',
+    };
+
+    const req = http.get(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        try {
+          if (res.statusCode === 200) {
+            const body = JSON.parse(data);
+            resolve(body.count ?? 0);
+          } else {
+            reject(new Error(`Failed to get registry count: status ${res.statusCode}`));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    req.end();
+  });
+}
+
 export function writeConfig(ports: OrchestratorResponse): void {
   const projectName = detectProjectName();
 
@@ -229,6 +444,78 @@ export async function isOrchestratorAvailable(targetUrl?: string): Promise<boole
   });
 }
 
+export async function attemptStartupHandler(): Promise<boolean> {
+  const rootDir = findProjectRoot(process.cwd());
+
+  const tsFileRoot = path.join(rootDir, 'startupHandler.ts');
+  const jsFileRoot = path.join(rootDir, 'startupHandler.js');
+  const tsFileScripts = path.join(rootDir, 'scripts', 'startupHandler.ts');
+  const jsFileScripts = path.join(rootDir, 'scripts', 'startupHandler.js');
+
+  let command = '';
+  let args: string[] = [];
+
+  if (fs.existsSync(tsFileRoot)) {
+    command = 'npx';
+    args = ['ts-node', tsFileRoot];
+  } else if (fs.existsSync(jsFileRoot)) {
+    command = 'node';
+    args = [jsFileRoot];
+  } else if (fs.existsSync(tsFileScripts)) {
+    command = 'npx';
+    args = ['ts-node', tsFileScripts];
+  } else if (fs.existsSync(jsFileScripts)) {
+    command = 'node';
+    args = [jsFileScripts];
+  } else {
+    // Check package.json scripts
+    const pkgPath = path.join(rootDir, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        if (pkg.scripts && (pkg.scripts['startupHandler'] || pkg.scripts['startup-handler'])) {
+          const scriptName = pkg.scripts['startupHandler'] ? 'startupHandler' : 'startup-handler';
+          command = 'npm';
+          args = ['run', scriptName];
+        }
+      } catch (e) {
+        // ignore JSON parse error
+      }
+    }
+  }
+
+  if (!command) {
+    console.warn('⚠️  No local startup handler found in project root or scripts');
+    return false;
+  }
+
+  console.log(`🚀 Executing local startup handler: ${command} ${args.join(' ')}...`);
+  try {
+    const child = spawn(command, args, {
+      cwd: rootDir,
+      stdio: 'inherit',
+      shell: true,
+      detached: true,
+    });
+    child.unref();
+
+    // Poll for up to 10 seconds for orchestrator to become available
+    const startTime = Date.now();
+    while (Date.now() - startTime < 10000) {
+      await new Promise((r) => setTimeout(r, 500));
+      const available = await isOrchestratorAvailable();
+      if (available) {
+        console.log('✅ GS-Orchestrator successfully started by startup handler!');
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error('❌ Failed to execute startup handler:', err);
+  }
+
+  return false;
+}
+
 export async function runPrestart(): Promise<OrchestratorResponse> {
   const componentArg = process.argv[2];
 
@@ -243,17 +530,23 @@ export async function runPrestart(): Promise<OrchestratorResponse> {
     console.log(`✅ Prestart agent complete`);
     return ports;
   } catch (error) {
-    console.warn(`⚠️  Orchestrator unavailable, using fallback ports`);
-    const fallbackPorts: OrchestratorResponse = {
-      backend: 3000,
-      frontend: 5173,
-      database: 5433,
-      ticket: 'fallback',
-      timestamp: new Date().toISOString(),
-    };
-    writeConfig(fallbackPorts);
-    console.log(`✅ Prestart agent complete (fallback)`);
-    return fallbackPorts;
+    console.warn(`⚠️  GS-Orchestrator unavailable on http://${ORCHESTRATOR_HOST}:${ORCHESTRATOR_PORT}. Attempting startup handler...`);
+    const recovered = await attemptStartupHandler();
+    if (recovered) {
+      try {
+        const ports = await registerWithOrchestrator();
+        writeConfig(ports);
+        console.log(`✅ Prestart agent complete after startup handler recovery`);
+        return ports;
+      } catch (retryErr) {
+        // Fall through to exception
+      }
+    }
+
+    throw new Error(
+      `Fatal: GS-Orchestrator is unavailable on http://${ORCHESTRATOR_HOST}:${ORCHESTRATOR_PORT} ` +
+        `and no valid startup handler could restore it. Aborting process.`
+    );
   }
 }
 
