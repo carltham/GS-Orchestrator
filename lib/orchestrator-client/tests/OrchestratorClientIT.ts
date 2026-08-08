@@ -11,7 +11,7 @@ import {
   resolveConfigFilePath,
   ApplicationHealth,
 } from '../src/index';
-import { OrchestratedLauncher } from '../src/launcher';
+import { OrchestratedLauncher } from '../src/launcher/launcher';
 
 /**
  * True Integration Test Suite for @gs/orchestrator-client.

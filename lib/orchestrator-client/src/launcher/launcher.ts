@@ -1,9 +1,9 @@
 import { ChildProcess, spawn } from 'child_process';
-import { sendHealthReport } from './apiClient';
+import { sendHealthReport } from '../api/apiClient';
+import { runPrestart } from '../startup/prestart';
+import { ApplicationHealth, OrchestratorResponse } from '../types';
 import { resolveBackendCommand, resolveFrontendCommand } from './commands';
 import { checkHttpHealth, waitForService } from './health';
-import { runPrestart } from './startup';
-import { ApplicationHealth, OrchestratorResponse } from './types';
 
 export class OrchestratedLauncher {
   private backendProcess?: ChildProcess;
