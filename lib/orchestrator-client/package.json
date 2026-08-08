@@ -6,7 +6,6 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "startupHandler": "node startupHandler.js",
     "test": "jest --testMatch='**/tests/**/*IT.ts'",
     "start": "tsc && node dist/index.js"
   },

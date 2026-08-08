@@ -3,6 +3,7 @@ import http from 'http';
 import path from 'path';
 import {
   isOrchestratorAvailable,
+  attemptStartupHandler,
   registerWithOrchestrator,
   sendHealthReport,
   getRegistryCount,
@@ -113,7 +114,11 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
 
   describe('Health Telemetry Dispatch', () => {
     test('sends real health report payload', async () => {
-      // Ensure project is registered before sending health report
+      const online = await isOrchestratorAvailable(orchestratorBaseUrl);
+      if (!online) {
+        await attemptStartupHandler();
+      }
+
       await registerWithOrchestrator();
 
       const health: ApplicationHealth = {
@@ -125,12 +130,8 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
       };
 
       const success = await sendHealthReport(health, orchestratorBaseUrl);
-      if (orchestratorOnline) {
-        expect(success).toBe(true);
-      } else {
-        expect(success).toBe(false);
-      }
-    });
+      expect(success).toBe(true);
+    }, 15000);
   });
 
   describe('Prestart Execution & Disk Config Persistence', () => {
@@ -148,7 +149,7 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
       expect(typeof writtenConfig.project).toBe('string');
       expect(writtenConfig.project.length).toBeGreaterThan(0);
       expect(writtenConfig.timestamp).toBeDefined();
-    });
+    }, 15000);
   });
 
   describe('Full Application Orchestration (Backend & Frontend Startup)', () => {
