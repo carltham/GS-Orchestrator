@@ -30,6 +30,17 @@ const portAllocator = new PortAllocatorService(registry, serverScanner);
 // Middleware
 app.use(express.json());
 
+// Installer Script Endpoints
+app.get('/install.sh', (req, res) => {
+  const scriptPath = path.join(__dirname, '..', '..', 'lib', 'orchestrator-client', 'install-client.sh');
+  res.sendFile(scriptPath);
+});
+
+app.get('/install.js', (req, res) => {
+  const scriptPath = path.join(__dirname, '..', '..', 'lib', 'orchestrator-client', 'install-client.js');
+  res.sendFile(scriptPath);
+});
+
 // Routes
 app.use(createHealthRoutes(registry, PORT));
 app.use(createRegistrationRoutes(registry, portAllocator, serverScanner, SELF_PROJECT_NAME));

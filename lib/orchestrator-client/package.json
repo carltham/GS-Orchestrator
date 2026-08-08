@@ -4,6 +4,9 @@
   "description": "GS Orchestrator Client",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "orchestrator-init": "bin/init.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "jest --testMatch='**/tests/**/*IT.ts'",
