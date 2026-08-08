@@ -3,36 +3,15 @@ import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { Registry } from './registryHandler';
+import { ProcessDetails, UnregisteredServer, UnregisteredServersData } from '../domain/ServerScannerTypes';
+import { RegistryService } from './RegistryService';
 
-export interface ProcessDetails {
-  pid?: number;
-  projectPath?: string;
-  projectName?: string;
-  cmd?: string;
-}
-
-export interface UnregisteredServer {
-  port: number;
-  pid?: number;
-  projectName?: string;
-  projectPath?: string;
-  cmd?: string;
-  type?: string;
-  detectedAt: string;
-}
-
-export interface UnregisteredServersData {
-  lastScanned: string;
-  servers: UnregisteredServer[];
-}
-
-export class ServerScanner {
+export class ServerScannerService {
   private filePath: string;
-  private registry: Registry;
+  private registry: RegistryService;
   private intervalTimer?: NodeJS.Timeout;
 
-  constructor(filePath: string, registry: Registry) {
+  constructor(filePath: string, registry: RegistryService) {
     this.filePath = filePath;
     this.registry = registry;
     this.ensureFileExists();

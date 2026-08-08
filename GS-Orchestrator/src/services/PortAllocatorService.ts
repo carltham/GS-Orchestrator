@@ -3,8 +3,8 @@
  * Prevents port conflicts across projects
  */
 
-import { Registry } from './registryManager';
-import { ServerScanner } from './serverScanner';
+import { RegistryService } from './RegistryService';
+import { ServerScannerService } from './ServerScannerService';
 
 // Default port range bases by server/service type
 const SERVICE_TYPE_BASE_PORTS: Record<string, number> = {
@@ -18,11 +18,11 @@ const SERVICE_TYPE_BASE_PORTS: Record<string, number> = {
   'postgres': 5433,
 };
 
-export class PortAllocator {
-  private registry: Registry;
-  private scanner?: ServerScanner;
+export class PortAllocatorService {
+  private registry: RegistryService;
+  private scanner?: ServerScannerService;
 
-  constructor(registry: Registry, scanner?: ServerScanner) {
+  constructor(registry: RegistryService, scanner?: ServerScannerService) {
     this.registry = registry;
     this.scanner = scanner;
   }

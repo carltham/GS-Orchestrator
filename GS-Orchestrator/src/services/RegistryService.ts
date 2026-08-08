@@ -5,24 +5,10 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { ProjectEntry } from '../domain/ProjectEntry';
+import { RegistryData } from '../domain/RegistryData';
 
-export interface ProjectEntry {
-  name: string;
-  path: string;
-  registeredAt: string;
-  components: Record<string, number>;
-  status: 'running' | 'stopped';
-  pid?: number;
-  ticket?: string;
-}
-
-export interface RegistryData {
-  projects: Record<string, ProjectEntry>;
-  nextPortBase: number;
-  lastUpdated: string;
-}
-
-export class Registry {
+export class RegistryService {
   private registryPath: string;
 
   constructor(registryPath: string) {
