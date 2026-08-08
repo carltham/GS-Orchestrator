@@ -45,6 +45,28 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
   });
 
   describe('Registration Workflow', () => {
+    test('recreates registry file when missing and registers successfully', async () => {
+      if (orchestratorOnline) {
+        const registryPath = path.resolve(__dirname, '../../../GS-Orchestrator/registry.json');
+        if (fs.existsSync(registryPath)) {
+          fs.unlinkSync(registryPath);
+        }
+
+        const response = await registerWithOrchestrator();
+        expect(response).toBeDefined();
+        expect(typeof response.backend).toBe('number');
+        expect(typeof response.frontend).toBe('number');
+        expect(typeof response.database).toBe('number');
+
+        expect(fs.existsSync(registryPath)).toBe(true);
+        const fileContent = JSON.parse(fs.readFileSync(registryPath, 'utf-8'));
+        expect(fileContent.projects).toBeDefined();
+        expect(Object.keys(fileContent.projects).length).toBeGreaterThan(0);
+      } else {
+        await expect(registerWithOrchestrator()).rejects.toThrow();
+      }
+    });
+
     test('registers or handles unavailability cleanly', async () => {
       if (orchestratorOnline) {
         const response = await registerWithOrchestrator();
@@ -56,10 +78,36 @@ describe('OrchestratorClient - Real Integration Test Suite (IT)', () => {
         await expect(registerWithOrchestrator()).rejects.toThrow();
       }
     });
+
+    test('registers under custom PROJECT_NAME "TestProject123"', async () => {
+      if (orchestratorOnline) {
+        process.env.PROJECT_NAME = 'TestProject123';
+
+        try {
+          const response = await registerWithOrchestrator();
+          expect(response).toBeDefined();
+          expect(typeof response.backend).toBe('number');
+          expect(typeof response.frontend).toBe('number');
+          expect(typeof response.database).toBe('number');
+
+          const registryPath = path.resolve(__dirname, '../../../GS-Orchestrator/registry.json');
+          if (fs.existsSync(registryPath)) {
+            const registryContent = JSON.parse(fs.readFileSync(registryPath, 'utf-8'));
+            expect(registryContent.projects['TestProject123']).toBeDefined();
+            expect(registryContent.projects['TestProject123'].name).toBe('TestProject123');
+          }
+        } finally {
+          delete process.env.PROJECT_NAME;
+        }
+      }
+    });
   });
 
   describe('Health Telemetry Dispatch', () => {
     test('sends real health report payload', async () => {
+      // Ensure project is registered before sending health report
+      await registerWithOrchestrator();
+
       const health: ApplicationHealth = {
         status: 'ok',
         backendStatus: true,

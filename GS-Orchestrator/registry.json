@@ -1,0 +1,30 @@
+{
+  "projects": {
+    "GS-Orchestrator": {
+      "name": "GS-Orchestrator",
+      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/samples/orchestrator-client",
+      "registeredAt": "2026-08-08T07:52:05.400Z",
+      "ports": {
+        "backend": 4200,
+        "frontend": 4201,
+        "database": 5433
+      },
+      "status": "running",
+      "ticket": "ticket-1786175525400-9b685c1e"
+    },
+    "TestProject123": {
+      "name": "TestProject123",
+      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/samples/orchestrator-client",
+      "registeredAt": "2026-08-08T07:52:05.412Z",
+      "ports": {
+        "backend": 4202,
+        "frontend": 4203,
+        "database": 5433
+      },
+      "status": "running",
+      "ticket": "ticket-1786175525411-1e097101"
+    }
+  },
+  "nextPortBase": 4204,
+  "lastUpdated": "2026-08-08T07:52:05.412Z"
+}
