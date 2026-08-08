@@ -4,6 +4,7 @@
  */
 
 import { Registry } from './registryHandler';
+import { ServerScanner } from './serverScanner';
 
 // Default port range bases by server/service type
 const SERVICE_TYPE_BASE_PORTS: Record<string, number> = {
@@ -19,9 +20,11 @@ const SERVICE_TYPE_BASE_PORTS: Record<string, number> = {
 
 export class PortAllocator {
   private registry: Registry;
+  private scanner?: ServerScanner;
 
-  constructor(registry: Registry) {
+  constructor(registry: Registry, scanner?: ServerScanner) {
     this.registry = registry;
+    this.scanner = scanner;
   }
 
   /**
@@ -54,6 +57,14 @@ export class PortAllocator {
         for (const p of Object.values(proj.components)) {
           usedPorts.add(p);
         }
+      }
+    }
+
+    // Include ports from unregistered servers
+    if (this.scanner) {
+      const unregistered = this.scanner.loadData();
+      for (const s of unregistered.servers) {
+        usedPorts.add(s.port);
       }
     }
 

@@ -7,8 +7,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --testMatch='**/tests/**/*IT.ts'",
-    "prestart": "tsc && node dist/index.js",
-    "start": "tsc && node dist/launcher.js"
+    "start": "tsc && node dist/index.js"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

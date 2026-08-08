@@ -457,13 +457,13 @@ export async function attemptStartupHandler(): Promise<boolean> {
 
   if (fs.existsSync(tsFileRoot)) {
     command = 'npx';
-    args = ['ts-node', tsFileRoot];
+    args = ['--yes', 'ts-node', tsFileRoot];
   } else if (fs.existsSync(jsFileRoot)) {
     command = 'node';
     args = [jsFileRoot];
   } else if (fs.existsSync(tsFileScripts)) {
     command = 'npx';
-    args = ['ts-node', tsFileScripts];
+    args = ['--yes', 'ts-node', tsFileScripts];
   } else if (fs.existsSync(jsFileScripts)) {
     command = 'node';
     args = [jsFileScripts];

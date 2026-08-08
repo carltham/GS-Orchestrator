@@ -8,6 +8,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { PortAllocator } from './services/portAllocator';
 import { Registry } from './services/registryHandler';
+import { ServerScanner } from './services/serverScanner';
 
 const app: Express = express();
 const PORT = 9000;
@@ -35,8 +36,11 @@ const SELF_PROJECT_NAME = detectSelfProjectName();
 
 // Initialize services
 const registryPath = path.join(__dirname, '..', 'dist', 'registry.json');
+const unregisteredPath = path.join(__dirname, '..', 'dist', 'unregistered-servers.json');
+
 const registry = new Registry(registryPath);
-const portAllocator = new PortAllocator(registry);
+const serverScanner = new ServerScanner(unregisteredPath, registry);
+const portAllocator = new PortAllocator(registry, serverScanner);
 
 // Middleware
 app.use(express.json());
@@ -70,8 +74,11 @@ app.get('/health', (req: Request, res: Response) => {
  *   "timestamp": "2026-08-08T10:00:00Z"
  * }
  */
-app.post('/api/register', (req: Request, res: Response) => {
+app.post('/api/register', async (req: Request, res: Response) => {
   try {
+    // Perform fast on-demand scan before registration to guarantee port state is fresh
+    await serverScanner.scanRunningServers().catch(() => {});
+
     // Accept both projectName and project for compatibility
     const projectName = req.body.projectName || req.body.project;
     const projectPath = req.body.path;
@@ -169,6 +176,15 @@ app.get('/api/count', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/unregistered
+ * Get list of detected running unregistered servers
+ */
+app.get('/api/unregistered', (req: Request, res: Response) => {
+  const data = serverScanner.loadData();
+  res.status(200).json(data);
+});
+
+/**
  * GET /api/health
  * Health check endpoint for orchestrator availability check
  */
@@ -233,12 +249,34 @@ app.post('/api/health', (req: Request, res: Response) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🎯 GS-Orchestrator running on http://localhost:${PORT}`);
-  console.log(`📋 Registry: ${registryPath}`);
-  console.log(`\nSupported Endpoints:`);
-  console.log(`  POST   /api/register   - Register a project and allocate ports`);
-  console.log(`  POST   /api/health     - Receive health report from project`);
-  console.log(`  GET    /health         - Health check`);
-});
+export { app, registry, serverScanner, portAllocator, SELF_PROJECT_NAME };
+
+if (require.main === module) {
+  // Start server
+  app.listen(PORT, async () => {
+    console.log(`🎯 GS-Orchestrator running on http://localhost:${PORT}`);
+    console.log(`📋 Registry: ${registryPath}`);
+    console.log(`🔍 Unregistered Servers File: ${unregisteredPath}`);
+    console.log(`\nSupported Endpoints:`);
+    console.log(`  POST   /api/register      - Register a project and allocate ports`);
+    console.log(`  POST   /api/health        - Receive health report from project`);
+    console.log(`  GET    /api/unregistered  - List detected unregistered running servers`);
+    console.log(`  GET    /health            - Health check`);
+
+    // Automatically scan for running unmanaged servers on startup and start 30s background loop
+    console.log(`\n🔍 Scanning for unregistered running servers...`);
+    try {
+      const discovered = await serverScanner.scanRunningServers();
+      if (discovered.length > 0) {
+        console.log(`⚠️  Detected ${discovered.length} unregistered running server(s):`);
+        discovered.forEach((s) => console.log(`   - Port ${s.port} (${s.type})`));
+      } else {
+        console.log(`✅ No unregistered running servers detected`);
+      }
+    } catch (err) {
+      console.error('Error during startup server scan:', err);
+    }
+
+    serverScanner.startPeriodicScan(30000);
+  });
+}
