@@ -36,3 +36,4 @@ echo "🛠️ Generating tailored startupHandler.js for '$TARGET_ABS'..."
 (cd "$TARGET_ABS" && npx orchestrator-init)
 
 echo "✨ Installation complete! @gs/orchestrator-client and startupHandler.js are ready."
+echo "🚀 To run the application, execute: npm start (or node startupHandler.js)"

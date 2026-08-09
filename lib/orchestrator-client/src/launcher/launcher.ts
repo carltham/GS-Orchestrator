@@ -1,5 +1,5 @@
 import { ChildProcess, spawn } from 'child_process';
-import { sendHealthReport } from '../api/apiClient';
+import { registerWithOrchestrator, sendHealthReport } from '../api/apiClient';
 import { runPrestart } from '../startup/prestart';
 import { ApplicationHealth, OrchestratorResponse } from '../types';
 import { resolveBackendCommand, resolveFrontendCommand } from './commands';
@@ -19,7 +19,20 @@ export class OrchestratedLauncher {
 
     await this.startBackend(this.ports.backend);
     await this.startFrontend(this.ports.frontend);
-    this.startHeartbeatLoop(this.ports.ticket);
+
+    // Re-register / confirm registration with Orchestrator once components are live
+    try {
+      console.log('🔄 Confirming live component registration with GS-Orchestrator...');
+      const updatedPorts = await registerWithOrchestrator();
+      if (updatedPorts) {
+        this.ports = updatedPorts;
+      }
+      console.log('✅ Registration confirmed in Orchestrator registry!');
+    } catch (err) {
+      console.warn('⚠️ Could not re-confirm registration with GS-Orchestrator:', err);
+    }
+
+    this.startHeartbeatLoop(this.ports?.ticket);
 
     console.log('✨ All components started successfully!');
   }

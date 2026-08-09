@@ -7,8 +7,12 @@ export * from './launcher/health';
 export * from './launcher/commands';
 export * from './launcher/launcher';
 
-import { runPrestart } from './startup/prestart';
+import { OrchestratedLauncher } from './launcher/launcher';
 
 if (require.main === module) {
-  runPrestart();
+  const launcher = new OrchestratedLauncher();
+  launcher.start().catch((err) => {
+    console.error('Fatal launcher error:', err);
+    process.exit(1);
+  });
 }

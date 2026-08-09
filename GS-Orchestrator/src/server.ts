@@ -27,7 +27,16 @@ const registry = new RegistryService(registryPath);
 const serverScanner = new ServerScannerService(unregisteredPath, registry);
 const portAllocator = new PortAllocatorService(registry, serverScanner);
 
-// Middleware
+// Simple manual CORS header middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 app.use(express.json());
 
 // Installer Script Endpoints

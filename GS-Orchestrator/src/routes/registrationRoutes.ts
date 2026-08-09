@@ -62,6 +62,19 @@ export function createRegistrationRoutes(
       if (projectName === selfProjectName) {
         ports['backend'] = 9000;
         components['backend::node-ts'] = 9000;
+        for (const [serviceKey, serverType] of Object.entries(serviceTypes)) {
+          if (serviceKey !== 'backend') {
+            const customBase = basePorts[serviceKey];
+            const allocatedPort = portAllocator.allocatePort(
+              projectName,
+              serviceKey,
+              serverType,
+              customBase
+            );
+            ports[serviceKey] = allocatedPort;
+            components[`${serviceKey}::${serverType}`] = allocatedPort;
+          }
+        }
       } else {
         for (const [serviceKey, serverType] of Object.entries(serviceTypes)) {
           const customBase = basePorts[serviceKey];

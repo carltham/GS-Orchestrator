@@ -33,6 +33,16 @@ function main() {
   });
   processes.push(orchestratorProc);
   console.log('✅ GS-Orchestrator server spawned.');
+
+  // Frontend Service (angular)
+  console.log('⏳ Starting Angular frontend (npm run dev)...');
+  const frontendProc = spawn('npm', ['run', 'dev'], {
+    cwd: path.join(__dirname, 'GS-Orchestrator-GUI'),
+    stdio: 'inherit',
+    shell: true,
+  });
+  processes.push(frontendProc);
+  console.log('✅ Frontend process spawned.');
 }
 
 main();
