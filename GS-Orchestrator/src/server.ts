@@ -9,6 +9,7 @@ import { createHealthRoutes } from './routes/healthRoutes';
 import { createRegistrationRoutes } from './routes/registrationRoutes';
 import { createRegistryRoutes } from './routes/registryRoutes';
 import { createScannerRoutes } from './routes/scannerRoutes';
+import signalRoutes from './routes/signalRoutes';
 import { PortAllocatorService } from './services/PortAllocatorService';
 import { RegistryService } from './services/RegistryService';
 import { ServerScannerService } from './services/ServerScannerService';
@@ -55,6 +56,7 @@ app.use(createHealthRoutes(registry, PORT));
 app.use(createRegistrationRoutes(registry, portAllocator, serverScanner, SELF_PROJECT_NAME));
 app.use(createRegistryRoutes(registry));
 app.use(createScannerRoutes(serverScanner));
+app.use('/api/signals', signalRoutes);
 
 export { app, registry, serverScanner, portAllocator, SELF_PROJECT_NAME };
 
@@ -65,7 +67,10 @@ if (require.main === module) {
     console.log(`🔍 Unregistered Servers File: ${unregisteredPath}`);
     console.log(`\nSupported Endpoints:`);
     console.log(`  POST   /api/register      - Register a project and allocate ports`);
+    console.log(`  DELETE /api/register/:name - Unregister a project`);
     console.log(`  POST   /api/health        - Receive health report from project`);
+    console.log(`  GET    /api/signals/:name - Get pending signals for project`);
+    console.log(`  POST   /api/signals/:name/ack - Mark signals as processed`);
     console.log(`  GET    /api/unregistered  - List detected unregistered running servers`);
     console.log(`  GET    /health            - Health check`);
 

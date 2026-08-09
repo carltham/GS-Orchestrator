@@ -11,6 +11,7 @@ import { OrchestratorService, ProjectEntry, UnregisteredServer } from './orchest
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
+  activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' = 'home';
   healthStatus = 'Loading...';
   orchestratorPort = 9000;
   registeredCount = 0;
@@ -123,5 +124,23 @@ export class AppComponent implements OnInit {
     return Object.entries(components)
       .map(([k, v]) => `${k}: ${v}`)
       .join(', ');
+  }
+
+  setActiveTab(tab: 'home' | 'projects' | 'register' | 'unregistered' | 'health'): void {
+    this.activeTab = tab;
+  }
+
+  unregisterProject(projectName: string): void {
+    if (confirm(`Are you sure you want to unregister project "${projectName}"?`)) {
+      this.orchestratorService.unregisterProject(projectName).subscribe({
+        next: () => {
+          alert(`Project "${projectName}" has been unregistered successfully.`);
+          this.refreshData();
+        },
+        error: (err: any) => {
+          alert(`Failed to unregister project: ${err.error?.error || 'Unknown error'}`);
+        }
+      });
+    }
   }
 }

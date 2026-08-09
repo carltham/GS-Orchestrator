@@ -75,4 +75,8 @@ export class OrchestratorService {
   }): Observable<any> {
     return this.http.post(`${this.baseUrl}/api/health`, data);
   }
+
+  unregisterProject(projectName: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/api/register/${projectName}`);
+  }
 }

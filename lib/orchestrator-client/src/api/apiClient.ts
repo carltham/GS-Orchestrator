@@ -229,3 +229,97 @@ export async function getRegistryCount(baseUrl?: string): Promise<number> {
     req.end();
   });
 }
+
+export interface Signal {
+  type: 'kill' | 'restart' | 'update';
+  projectName: string;
+  timestamp: string;
+  processed: boolean;
+}
+
+export async function getSignalsForProject(
+  projectName: string,
+  targetUrl?: string
+): Promise<Signal[]> {
+  let hostname = ORCHESTRATOR_HOST;
+  let port = ORCHESTRATOR_PORT;
+
+  if (targetUrl) {
+    try {
+      const urlObj = new URL(targetUrl);
+      hostname = urlObj.hostname;
+      port = parseInt(urlObj.port || '80', 10);
+    } catch (err) {
+      // use defaults
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    const reqOptions = {
+      hostname,
+      port,
+      path: `/api/signals/${projectName}`,
+      method: 'GET',
+    };
+
+    const req = http.get(reqOptions, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        try {
+          if (res.statusCode === 200) {
+            const body = JSON.parse(data);
+            resolve(body.signals ?? []);
+          } else {
+            reject(new Error(`Failed to get signals: status ${res.statusCode}`));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+
+    req.on('error', (err) => reject(err));
+    req.end();
+  });
+}
+
+export async function acknowledgeSignals(projectName: string, targetUrl?: string): Promise<boolean> {
+  let hostname = ORCHESTRATOR_HOST;
+  let port = ORCHESTRATOR_PORT;
+
+  if (targetUrl) {
+    try {
+      const urlObj = new URL(targetUrl);
+      hostname = urlObj.hostname;
+      port = parseInt(urlObj.port || '80', 10);
+    } catch (err) {
+      // use defaults
+    }
+  }
+
+  return new Promise((resolve) => {
+    const postData = JSON.stringify({ acknowledged: true });
+
+    const reqOptions = {
+      hostname,
+      port,
+      path: `/api/signals/${projectName}/ack`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData),
+      },
+    };
+
+    const req = http.request(reqOptions, (res) => {
+      resolve(res.statusCode === 200);
+    });
+
+    req.on('error', () => resolve(false));
+    req.write(postData);
+    req.end();
+  });
+}

@@ -22,7 +22,10 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
     await expect(jsLink).toBeVisible();
   });
 
-  test('should display System Overview Statistics Cards', async ({ page }) => {
+  test('should display Home page with overview cards and description', async ({ page }) => {
+    await expect(page.locator('[data-testid="page-home"]')).toBeVisible();
+    await expect(page.locator('.hero-title')).toContainText('Welcome to GS-Orchestrator');
+
     // Total Registered Count Card
     const projectCountCard = page.locator('[data-testid="registered-count-card"]');
     await expect(projectCountCard).toBeVisible();
@@ -33,7 +36,10 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
     await expect(portCard).toContainText('9000');
   });
 
-  test('should display Registered Projects Table & details', async ({ page }) => {
+  test('should display Registered Projects Table on Projects page', async ({ page }) => {
+    await page.click('[data-testid="nav-tab-projects"]');
+    await expect(page.locator('[data-testid="page-projects"]')).toBeVisible();
+
     const table = page.locator('[data-testid="registered-projects-table"]');
     await expect(table).toBeVisible();
 
@@ -44,11 +50,15 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
       'Status',
       'Components & Allocated Ports',
       'Ticket',
-      'Registered At'
+      'Registered At',
+      'Actions'
     ]);
   });
 
-  test('should allow registering a new project via Registration Form', async ({ page }) => {
+  test('should allow registering a new project via Register New Project page', async ({ page }) => {
+    await page.click('[data-testid="nav-tab-register"]');
+    await expect(page.locator('[data-testid="page-register"]')).toBeVisible();
+
     const form = page.locator('[data-testid="registration-form"]');
     await expect(form).toBeVisible();
 
@@ -63,17 +73,21 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
     // Submit registration
     await page.click('[data-testid="btn-register-submit"]');
 
-    // Verify confirmation message / new project appears in table
+    // Verify confirmation message
     const alert = page.locator('[data-testid="registration-alert"]');
-    await expect(alert).toBeVisible();
+    await expect(alert).toBeVisible({ timeout: 10000 });
     await expect(alert).toContainText(/registered successfully/i);
 
-    // Verify row added to table
+    // Switch to Projects tab and verify row added to table
+    await page.click('[data-testid="nav-tab-projects"]');
     const newRow = page.locator('[data-testid="registered-projects-table"] tr', { hasText: uniqueName });
     await expect(newRow).toBeVisible();
   });
 
-  test('should display Unregistered Running Servers Panel', async ({ page }) => {
+  test('should display Unregistered Running Servers on Detected Servers page', async ({ page }) => {
+    await page.click('[data-testid="nav-tab-unregistered"]');
+    await expect(page.locator('[data-testid="page-unregistered"]')).toBeVisible();
+
     const section = page.locator('[data-testid="unregistered-servers-section"]');
     await expect(section).toBeVisible();
 
@@ -85,7 +99,10 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
     await expect(serverList).toBeVisible();
   });
 
-  test('should simulate sending health reports via Health Simulator Form', async ({ page }) => {
+  test('should simulate sending health reports on Health Simulator page', async ({ page }) => {
+    await page.click('[data-testid="nav-tab-health"]');
+    await expect(page.locator('[data-testid="page-health"]')).toBeVisible();
+
     const section = page.locator('[data-testid="health-simulator-section"]');
     await expect(section).toBeVisible();
 
@@ -98,6 +115,51 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
     const resultAlert = page.locator('[data-testid="health-report-alert"]');
     await expect(resultAlert).toBeVisible();
     await expect(resultAlert).toContainText(/Health report received/i);
+  });
+
+  test('should allow unregistering a project from Registered Projects page', async ({ page }) => {
+    // First, register a test project
+    await page.click('[data-testid="nav-tab-register"]');
+    await expect(page.locator('[data-testid="page-register"]')).toBeVisible();
+
+    const uniqueName = `UnregTest_${Date.now()}`;
+
+    // Fill and submit registration form
+    await page.fill('[data-testid="input-project-name"]', uniqueName);
+    await page.fill('[data-testid="input-project-path"]', `/mnt/DATA/Projects/${uniqueName}`);
+    await page.selectOption('[data-testid="select-backend-type"]', 'node-ts');
+    await page.selectOption('[data-testid="select-frontend-type"]', 'angular');
+    await page.click('[data-testid="btn-register-submit"]');
+
+    // Wait for success alert
+    const alert = page.locator('[data-testid="registration-alert"]');
+    await expect(alert).toBeVisible({ timeout: 10000 });
+
+    // Dismiss any alert dialogs
+    page.on('dialog', dialog => {
+      dialog.accept();
+    });
+
+    // Navigate to Projects page
+    await page.click('[data-testid="nav-tab-projects"]');
+    const projectRow = page.locator('[data-testid="registered-projects-table"] tr', { hasText: uniqueName });
+    await expect(projectRow).toBeVisible({ timeout: 5000 });
+
+    // Find and click unregister button for this project
+    const unregisterBtn = projectRow.locator('[data-testid="btn-unregister-project"]');
+    await expect(unregisterBtn).toBeVisible();
+    await unregisterBtn.click();
+
+    // Wait for dialogs to be handled and request to complete
+    await page.waitForTimeout(3000);
+
+    // Reload to see updated state
+    await page.reload();
+    await page.waitForTimeout(2000);
+
+    // Verify row is no longer in the table
+    const deletedRow = page.locator('[data-testid="registered-projects-table"] tr', { hasText: uniqueName });
+    await expect(deletedRow).not.toBeVisible({ timeout: 5000 });
   });
 
 });

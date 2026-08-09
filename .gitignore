@@ -6,3 +6,6 @@ GS-Orchestrator/dist/
 GS-Orchestrator/node_modules/
 lib/orchestrator-client/node_modules/
 lib/orchestrator-client/dist/
+test-results/
+signals.json
+playwright-report/

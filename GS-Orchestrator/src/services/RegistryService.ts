@@ -136,4 +136,17 @@ export class RegistryService {
   getState(): RegistryData {
     return this.load();
   }
+
+  /**
+   * Unregister a project from the registry
+   */
+  unregisterProject(name: string): boolean {
+    const data = this.load();
+    if (data.projects[name]) {
+      delete data.projects[name];
+      this.save(data);
+      return true;
+    }
+    return false;
+  }
 }

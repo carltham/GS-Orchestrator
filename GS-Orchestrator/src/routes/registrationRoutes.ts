@@ -3,6 +3,7 @@ import { Request, Response, Router } from 'express';
 import { PortAllocatorService } from '../services/PortAllocatorService';
 import { RegistryService } from '../services/RegistryService';
 import { ServerScannerService } from '../services/ServerScannerService';
+import { signalService } from '../services/SignalService';
 
 export function createRegistrationRoutes(
   registry: RegistryService,
@@ -11,6 +12,43 @@ export function createRegistrationRoutes(
   selfProjectName: string
 ): Router {
   const router = Router();
+
+  // DELETE /api/register/:projectName
+  router.delete('/api/register/:projectName', async (req: Request, res: Response) => {
+    try {
+      const projectName = req.params.projectName;
+
+      if (!projectName) {
+        return res.status(400).json({
+          error: 'Missing required parameter: projectName',
+        });
+      }
+
+      // Queue a kill signal for the client
+      signalService.queueSignal('kill', projectName);
+
+      const success = registry.unregisterProject(projectName);
+
+      if (success) {
+        console.log(`✅ Project "${projectName}" unregistered successfully`);
+        return res.json({
+          message: `Project "${projectName}" has been unregistered. Kill signal queued for client.`,
+          projectName,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        return res.status(404).json({
+          error: `Project "${projectName}" not found in registry`,
+        });
+      }
+    } catch (error) {
+      console.error('Unregistration error:', error);
+      res.status(500).json({
+        error: 'Failed to unregister project',
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
 
   // POST /api/register
   router.post('/api/register', async (req: Request, res: Response) => {
