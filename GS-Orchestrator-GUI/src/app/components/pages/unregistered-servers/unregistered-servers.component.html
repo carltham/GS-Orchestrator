@@ -1,0 +1,34 @@
+<div *ngIf="activeTab === 'unregistered'" data-testid="page-unregistered">
+  <div class="card" data-testid="unregistered-servers-section" style="margin-bottom: 30px;">
+    <h2>Detected Unregistered Running Servers</h2>
+    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 15px;">
+      Live TCP processes listening on active ports that are currently unmanaged by the GS-Orchestrator registry.
+    </p>
+
+    <div data-testid="unregistered-servers-list">
+      <div *ngIf="unregisteredServers.length > 0; else noServers">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Port</th>
+              <th>Type</th>
+              <th>Process PID</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of unregisteredServers">
+              <td><strong>{{ s.port }}</strong></td>
+              <td>{{ s.type }}</td>
+              <td><code>{{ s.pid || 'Unknown' }}</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noServers>
+        <p style="text-align: center; color: #94a3b8; padding: 20px;">
+          ✅ No unregistered servers detected. All ports are accounted for.
+        </p>
+      </ng-template>
+    </div>
+  </div>
+</div>

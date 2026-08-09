@@ -112,11 +112,11 @@ export class OrchestratedLauncher {
         const signals = await getSignalsForProject(this.projectName);
         if (signals && signals.length > 0) {
           for (const signal of signals) {
-            if (signal.type === 'kill') {
-              console.log(`🛑 Kill signal received from Orchestrator for project: ${signal.projectName}`);
+            if (signal.type === 'stop') {
+              console.log(`🛑 Stop signal received from Orchestrator for project: ${signal.projectName}`);
               this.killProcesses();
               await acknowledgeSignals(this.projectName);
-              console.log(`✅ Acknowledged kill signal and terminated processes`);
+              console.log(`✅ Acknowledged stop signal and terminated processes`);
               process.exit(0);
             } else if (signal.type === 'restart') {
               console.log(`🔄 Restart signal received from Orchestrator`);

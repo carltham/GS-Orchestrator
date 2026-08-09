@@ -231,7 +231,7 @@ export async function getRegistryCount(baseUrl?: string): Promise<number> {
 }
 
 export interface Signal {
-  type: 'kill' | 'restart' | 'update';
+  type: 'stop' | 'restart' | 'update';
   projectName: string;
   timestamp: string;
   processed: boolean;

@@ -114,6 +114,17 @@ export class RegistryService {
   }
 
   /**
+   * Update entire project entry directly on disk
+   */
+  updateProject(name: string, project: ProjectEntry): void {
+    const data = this.load();
+    if (data.projects[name]) {
+      data.projects[name] = project;
+      this.save(data);
+    }
+  }
+
+  /**
    * Update next port base directly on disk
    */
   updateNextPortBase(nextBase: number): void {

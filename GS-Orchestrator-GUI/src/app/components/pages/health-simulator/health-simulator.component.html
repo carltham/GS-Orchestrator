@@ -1,0 +1,32 @@
+<div *ngIf="activeTab === 'health'" data-testid="page-health">
+  <div class="card" data-testid="health-simulator-section" style="max-width: 600px; margin: 0 auto;">
+    <h3>Health Report Simulator</h3>
+    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">
+      Simulate sending a health report to GS-Orchestrator. Useful for testing client communication.
+    </p>
+
+    <form (ngSubmit)="sendHealthReport()">
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" class="form-control" [(ngModel)]="projectName" name="projectName" data-testid="input-health-project-name" placeholder="e.g. GS-Orchestrator" required>
+      </div>
+      <div class="form-group">
+        <label>Health Status</label>
+        <select class="form-control" [(ngModel)]="statusOption" name="statusOption" data-testid="select-health-status">
+          <option value="ok">OK</option>
+          <option value="degraded">Degraded</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Uptime (seconds)</label>
+        <input type="number" class="form-control" [(ngModel)]="uptime" name="uptime" data-testid="input-health-uptime" placeholder="3600" required>
+      </div>
+      <button type="submit" class="btn btn-primary" data-testid="btn-send-health" style="width: 100%;">Send Health Report</button>
+    </form>
+
+    <div *ngIf="healthAlert" class="alert" [ngClass]="healthAlert.includes('Health report received') ? 'alert-success' : 'alert-error'" data-testid="health-report-alert">
+      {{ healthAlert }}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,48 @@
+<div *ngIf="activeTab === 'home'" data-testid="page-home">
+  <div class="hero-card">
+    <h2 class="hero-title">Welcome to GS-Orchestrator</h2>
+    <p class="hero-text">
+      GS-Orchestrator is a lightweight, zero-configuration local service discovery & port management orchestrator.
+      It enables multi-service microservice architectures to automatically allocate unique local ports, track service health,
+      detect unmanaged local background daemons, and manage service lifecycles without manual port collision handling.
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h4>⚡ Dynamic Port Allocation</h4>
+        <p>Automatically reserves non-overlapping base ports for backend and frontend services on startup.</p>
+      </div>
+      <div class="feature-card">
+        <h4>🔍 Background Process Scanner</h4>
+        <p>Monitors active TCP ports across the system to locate unregistered development servers & daemons.</p>
+      </div>
+      <div class="feature-card">
+        <h4>💓 Health Reporting & Heartbeats</h4>
+        <p>Accepts periodic health pings from registered clients to keep service registry states accurate.</p>
+      </div>
+      <div class="feature-card">
+        <h4>🚀 &#64;gs/orchestrator-client</h4>
+        <p>Provides zero-setup client initialization scripts, startup handlers, and prestart hooks for projects.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Statistics Cards -->
+  <div class="stats-grid">
+    <div class="card" data-testid="registered-count-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 1rem;">Registered Projects</h3>
+        <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" (click)="refresh()">Refresh</button>
+      </div>
+      <div class="stat-value">{{ projectsList.length }}</div>
+    </div>
+    <div class="card" data-testid="orchestrator-port-card">
+      <h3 style="margin: 0; font-size: 1rem;">Orchestrator Port</h3>
+      <div class="stat-value">{{ orchestratorPort }}</div>
+    </div>
+    <div class="card">
+      <h3 style="margin: 0; font-size: 1rem;">Detected Unregistered</h3>
+      <div class="stat-value" style="color: #f59e0b;">{{ unregisteredServers.length }}</div>
+    </div>
+  </div>
+</div>

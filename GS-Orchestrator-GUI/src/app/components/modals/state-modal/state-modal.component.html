@@ -1,0 +1,25 @@
+<div *ngIf="isOpen" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Manage Project State</h3>
+      <button class="modal-close" (click)="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p *ngIf="project" style="color: #cbd5e1; margin-bottom: 20px;">
+        Project: <strong>{{ project.name }}</strong><br>
+        Current Status: <strong>{{ project.status || 'running' }}</strong>
+      </p>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-danger" (click)="stopProject()" style="flex: 1;">
+          🛑 Stop Project
+        </button>
+        <button class="btn btn-primary" (click)="restartProject()" style="flex: 1;">
+          🔄 Restart Project
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" (click)="closeModal()" style="background: #6b7280; color: #f1f5f9;">Cancel</button>
+    </div>
+  </div>
+</div>

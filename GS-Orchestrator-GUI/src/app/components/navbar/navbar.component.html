@@ -1,0 +1,32 @@
+<nav class="nav-tabs">
+  <button class="nav-tab" 
+    [class.active]="activeTab === 'home'" 
+    (click)="setTab('home')" 
+    data-testid="nav-tab-home">
+    Home
+  </button>
+  <button class="nav-tab" 
+    [class.active]="activeTab === 'projects'" 
+    (click)="setTab('projects')" 
+    data-testid="nav-tab-projects">
+    Registered Projects ({{ projectsCount }})
+  </button>
+  <button class="nav-tab" 
+    [class.active]="activeTab === 'register'" 
+    (click)="setTab('register')" 
+    data-testid="nav-tab-register">
+    Register New Project
+  </button>
+  <button class="nav-tab" 
+    [class.active]="activeTab === 'unregistered'" 
+    (click)="setTab('unregistered')" 
+    data-testid="nav-tab-unregistered">
+    Detected Servers ({{ unregisteredCount }})
+  </button>
+  <button class="nav-tab" 
+    [class.active]="activeTab === 'health'" 
+    (click)="setTab('health')" 
+    data-testid="nav-tab-health">
+    Health Simulator
+  </button>
+</nav>

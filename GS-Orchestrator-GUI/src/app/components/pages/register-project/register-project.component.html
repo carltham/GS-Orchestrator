@@ -1,0 +1,40 @@
+<div *ngIf="activeTab === 'register'" data-testid="page-register">
+  <div class="card" data-testid="registration-form" style="max-width: 600px; margin: 0 auto;">
+    <h3>Register New Project</h3>
+    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">
+      Registering a project instructs GS-Orchestrator to allocate dynamic non-conflicting ports for its backend and frontend components.
+    </p>
+
+    <form (ngSubmit)="submitRegistration()">
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" class="form-control" [(ngModel)]="projectName" name="projectName" data-testid="input-project-name" placeholder="e.g. MyService" required>
+      </div>
+      <div class="form-group">
+        <label>Project Path</label>
+        <input type="text" class="form-control" [(ngModel)]="projectPath" name="projectPath" data-testid="input-project-path" placeholder="/path/to/project" required>
+      </div>
+      <div class="form-group">
+        <label>Backend Framework</label>
+        <select class="form-control" [(ngModel)]="backendType" name="backendType" data-testid="select-backend-type">
+          <option value="node-ts">node-ts</option>
+          <option value="backend">backend</option>
+          <option value="express">express</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Frontend Framework</label>
+        <select class="form-control" [(ngModel)]="frontendType" name="frontendType" data-testid="select-frontend-type">
+          <option value="angular">angular</option>
+          <option value="react">react</option>
+          <option value="vite">vite</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" data-testid="btn-register-submit" style="width: 100%;">Register Project</button>
+    </form>
+
+    <div *ngIf="registrationAlert" class="alert alert-success" data-testid="registration-alert">
+      {{ registrationAlert }}
+    </div>
+  </div>
+</div>

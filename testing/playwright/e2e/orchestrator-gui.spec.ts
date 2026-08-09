@@ -50,8 +50,7 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
       'Status',
       'Components & Allocated Ports',
       'Ticket',
-      'Registered At',
-      'Actions'
+      'Registered At'
     ]);
   });
 
@@ -145,10 +144,15 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
     const projectRow = page.locator('[data-testid="registered-projects-table"] tr', { hasText: uniqueName });
     await expect(projectRow).toBeVisible({ timeout: 5000 });
 
-    // Find and click unregister button for this project
-    const unregisterBtn = projectRow.locator('[data-testid="btn-unregister-project"]');
-    await expect(unregisterBtn).toBeVisible();
-    await unregisterBtn.click();
+    // Find and click status badge to open state modal
+    const statusBadge = projectRow.locator('span.badge-clickable');
+    await expect(statusBadge).toBeVisible();
+    await statusBadge.click();
+
+    // Wait for modal to appear and click Stop button
+    const stopButton = page.locator('button:has-text("🛑 Stop Project")');
+    await expect(stopButton).toBeVisible();
+    await stopButton.click();
 
     // Wait for dialogs to be handled and request to complete
     await page.waitForTimeout(3000);

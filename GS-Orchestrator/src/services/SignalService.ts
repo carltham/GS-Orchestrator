@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 interface Signal {
-  type: 'kill' | 'restart' | 'update';
+  type: 'stop' | 'restart' | 'update';
   projectName: string;
   timestamp: string;
   processed: boolean;
@@ -39,7 +39,7 @@ export class SignalService {
     }
   }
 
-  queueSignal(type: 'kill' | 'restart' | 'update', projectName: string): void {
+  queueSignal(type: 'stop' | 'restart' | 'update', projectName: string): void {
     const signal: Signal = {
       type,
       projectName,

@@ -3,7 +3,7 @@ export class ProjectEntry {
   path!: string;
   registeredAt!: string;
   components!: Record<string, number>;
-  status!: 'running' | 'stopped';
+  status!: 'start' | 'starting' | 'running' | 'stop' | 'stopping' | 'stopped';
   pid?: number;
   ticket?: string;
 

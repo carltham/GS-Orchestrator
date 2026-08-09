@@ -1,0 +1,56 @@
+<div *ngIf="activeTab === 'projects'" data-testid="page-projects">
+  <div class="card" style="margin-bottom: 30px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Registered Projects Registry</h3>
+      <button class="btn btn-primary" (click)="refresh()">Refresh Data</button>
+    </div>
+
+    <table class="data-table" data-testid="registered-projects-table">
+      <thead>
+        <tr>
+          <th>Project Name</th>
+          <th>Path</th>
+          <th>Status</th>
+          <th>Components & Allocated Ports</th>
+          <th>Ticket</th>
+          <th>Registered At</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of projectsList">
+          <td><strong>{{ p.name }}</strong></td>
+          <td><code>{{ p.path }}</code></td>
+          <td>
+            <span class="badge badge-clickable" 
+              [ngClass]="{
+                'badge-healthy': !p.status || p.status === 'running',
+                'badge-degraded': p.status === 'stopping' || p.status === 'stopped',
+                'badge-warning': p.status === 'starting' || p.status === 'stop'
+              }"
+              (click)="!p.status || p.status === 'running' ? openStateModal(p) : null"
+              [style.cursor]="!p.status || p.status === 'running' ? 'pointer' : 'default'"
+              [title]="!p.status || p.status === 'running' ? 'Click to change state' : 'Project is transitioning'">
+              {{ p.status || 'running' }}
+            </span>
+          </td>
+          <td>{{ getComponentEntries(p.components) }}</td>
+          <td><code>{{ p.ticket || 'N/A' }}</code></td>
+          <td>{{ p.registeredAt | date:'medium' }}</td>
+        </tr>
+        <tr *ngIf="projectsList.length === 0">
+          <td colspan="6" style="text-align: center; color: #94a3b8;">
+            No projects registered yet. Navigate to <strong>Register New Project</strong> to add one.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<app-state-modal 
+  [isOpen]="showStateModal"
+  [project]="selectedProject"
+  (closed)="closeStateModal()"
+  (stopProjectClicked)="onStopProject()"
+  (restartProjectClicked)="onRestartProject()">
+</app-state-modal>

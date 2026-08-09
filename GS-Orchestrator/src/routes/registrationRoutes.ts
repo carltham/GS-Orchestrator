@@ -24,16 +24,22 @@ export function createRegistrationRoutes(
         });
       }
 
-      // Queue a kill signal for the client
-      signalService.queueSignal('kill', projectName);
+      // Update project status to 'stopping'
+      const project = registry.getProject(projectName);
+      if (project) {
+        project.status = 'stopping';
+        registry.updateProject(projectName, project);
+      }
 
-      const success = registry.unregisterProject(projectName);
+      // Queue a stop signal for the client
+      signalService.queueSignal('stop', projectName);
 
-      if (success) {
-        console.log(`✅ Project "${projectName}" unregistered successfully`);
+      if (project) {
+        console.log(`🛑 Project "${projectName}" status changed to stopping. Stop signal queued for client.`);
         return res.json({
-          message: `Project "${projectName}" has been unregistered. Kill signal queued for client.`,
+          message: `Project "${projectName}" is stopping. Stop signal queued for client.`,
           projectName,
+          status: 'stopping',
           timestamp: new Date().toISOString(),
         });
       } else {
@@ -45,6 +51,42 @@ export function createRegistrationRoutes(
       console.error('Unregistration error:', error);
       res.status(500).json({
         error: 'Failed to unregister project',
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  // POST /api/register/:projectName/stopped
+  // Mark a project as stopped and remove from registry
+  router.post('/api/register/:projectName/stopped', async (req: Request, res: Response) => {
+    try {
+      const projectName = req.params.projectName;
+
+      if (!projectName) {
+        return res.status(400).json({
+          error: 'Missing required parameter: projectName',
+        });
+      }
+
+      const success = registry.unregisterProject(projectName);
+
+      if (success) {
+        console.log(`✅ Project "${projectName}" stopped and removed from registry`);
+        return res.json({
+          message: `Project "${projectName}" has been stopped and removed from registry`,
+          projectName,
+          status: 'stopped',
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        return res.status(404).json({
+          error: `Project "${projectName}" not found in registry`,
+        });
+      }
+    } catch (error) {
+      console.error('Stop confirmation error:', error);
+      res.status(500).json({
+        error: 'Failed to confirm project stopped',
         details: error instanceof Error ? error.message : String(error),
       });
     }
