@@ -1,0 +1,31 @@
+{
+  "name": "gs-orchestrator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "startupHandler.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "dev": "npm --prefix GS-Orchestrator run dev",
+    "build": "npm --prefix GS-Orchestrator run build && npm --prefix lib/orchestrator-client run build",
+    "start": "node startupHandler.js",
+    "test": "npm --prefix GS-Orchestrator test && npm --prefix lib/orchestrator-client test",
+    "startupHandler": "node startupHandler.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carltham/GS-Orchestrator.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/carltham/GS-Orchestrator/issues"
+  },
+  "homepage": "https://github.com/carltham/GS-Orchestrator#readme",
+  "dependencies": {
+    "@gs/orchestrator-client": "file:lib/orchestrator-client"
+  }
+}

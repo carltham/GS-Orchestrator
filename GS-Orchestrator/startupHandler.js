@@ -11,12 +11,14 @@ function main() {
 
   // Backend Service (TypeScript)
   const backendPath = path.join(__dirname, 'src', 'server.ts');
+  const configDir = path.join(__dirname, '..', 'config');
   console.log('⏳ Starting Backend service (ts-node)...');
   const backendProc = spawn('npx', ['--yes', 'ts-node', backendPath], {
     cwd: path.dirname(backendPath),
     stdio: 'inherit',
     shell: true,
     detached: true,
+    env: { ...process.env, GSSHOPPER_CONFIG_DIR: configDir },
   });
   backendProc.unref();
   console.log('✅ Backend process spawned.');
