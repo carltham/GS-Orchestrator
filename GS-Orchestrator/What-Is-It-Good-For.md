@@ -17,17 +17,18 @@ A **standalone, always-running service** that acts as a central coordinator for 
 
 1. **Project Registration**
    - Project registers on startup: `POST /api/register { projectName: "ProjectName", path: "/path/to/project" }`
-   - Orchestrator assigns ports: backend=4200, frontend=4201, etc.
+   - Orchestrator assigns dynamic non-overlapping ports for backend, frontend, etc.
    - Registry persisted to `registry.json`
 
-2. **Port Allocation**
-   - Dynamic port assignment from range 4200+
-   - No manual port management
-   - No conflicts: Orchestrator guarantees unique ports
+2. **Port Allocation & Control Center**
+   - Dynamic port assignment across service ranges
+   - Interactive Angular Control Center GUI running on `:9001`
+   - No manual port management or conflicts
 
 3. **Service Discovery & Health**
    - Health telemetry check-ins via `POST /api/health`
-   - Returns allocated ports and tickets
+   - Unregistered TCP process scanner detects active local background daemons
+   - Returns allocated ports, status, and tickets
 
 ## Benefits
 
@@ -85,12 +86,15 @@ POST /api/register
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Orchestrator (always running on :9000)         │
-│  - Central registry of all projects             │
-│  - Port allocator (prevents conflicts)          │
-│  - Health monitoring & service discovery        │
-└─────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│  Orchestrator API (Express on :9000)                   │
+│  - Central registry of all projects                    │
+│  - Port allocator & background TCP process scanner     │
+│  - Health monitoring, service discovery & JWT Auth     │
+├────────────────────────────────────────────────────────┤
+│  Control Center GUI (Angular 17 on :9001)              │
+│  - Interactive dashboard, simulator & user manager    │
+└────────────────────────────────────────────────────────┘
         ↑           ↑           ↑
         |           |           |
    Registers    Sends        Checks
