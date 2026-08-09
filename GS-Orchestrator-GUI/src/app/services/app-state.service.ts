@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { ProjectEntry, UnregisteredServer } from '../orchestrator.service';
 
 export interface AppState {
-  activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health';
+  activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' | 'users';
   healthStatus: string;
   orchestratorPort: number;
   projectsList: ProjectEntry[];
@@ -31,7 +31,7 @@ export class AppStateService {
     return this.state.value;
   }
 
-  setActiveTab(tab: 'home' | 'projects' | 'register' | 'unregistered' | 'health'): void {
+  setActiveTab(tab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' | 'users'): void {
     this.updateState({ activeTab: tab });
   }
 

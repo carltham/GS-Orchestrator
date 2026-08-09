@@ -1,0 +1,116 @@
+<div *ngIf="activeTab === 'users'" data-testid="page-users">
+  <div class="card" data-testid="users-manager-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div>
+        <h3>👥 User Manager</h3>
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">
+          Manage application accounts, roles, and permissions (Thor Superadmin area).
+        </p>
+      </div>
+      <button class="btn btn-primary" (click)="showCreateModal = true">
+        ➕ Create New User
+      </button>
+    </div>
+
+    <!-- Alert Messages -->
+    <div *ngIf="message" class="alert" [ngClass]="isError ? 'alert-error' : 'alert-success'" style="margin-bottom: 20px;">
+      {{ message }}
+    </div>
+
+    <!-- Users Table -->
+    <table class="table users-table" *ngIf="users.length > 0">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Created At</th>
+          <th>Last Login</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of users">
+          <td><strong>{{ u.username }}</strong></td>
+          <td>
+            <span class="badge" [ngClass]="u.role === 'SUPERADMIN' ? 'badge-primary' : 'badge-secondary'">
+              {{ u.role }}
+            </span>
+          </td>
+          <td>
+            <span class="badge" 
+              [ngClass]="{
+                'badge-healthy': u.enabled,
+                'badge-degraded': !u.enabled,
+                'badge-clickable': u.id !== 'thor-superadmin'
+              }"
+              (click)="u.id !== 'thor-superadmin' ? openUserModal(u) : null"
+              [style.cursor]="u.id !== 'thor-superadmin' ? 'pointer' : 'default'"
+              [title]="u.id !== 'thor-superadmin' ? 'Click to manage user' : 'System default user cannot be modified'">
+              {{ u.enabled ? 'Enabled' : 'Disabled' }}
+            </span>
+          </td>
+          <td>{{ u.createdAt | date:'medium' }}</td>
+          <td>{{ u.lastLoginAt ? (u.lastLoginAt | date:'medium') : 'Never' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- User Action Modal (Disable / Delete) -->
+  <div class="modal-backdrop" *ngIf="showUserModal">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0;">Manage User</h3>
+        <button class="btn btn-sm btn-secondary" (click)="closeUserModal()">&times;</button>
+      </div>
+      <div *ngIf="selectedUser" style="color: #cbd5e1; margin-bottom: 20px;">
+        <p>User: <strong>{{ selectedUser.username }}</strong></p>
+        <p>Role: <strong>{{ selectedUser.role }}</strong></p>
+        <p>Current Status: 
+          <span class="badge" [ngClass]="selectedUser.enabled ? 'badge-healthy' : 'badge-degraded'">
+            {{ selectedUser.enabled ? 'Enabled' : 'Disabled' }}
+          </span>
+        </p>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn" [ngClass]="selectedUser?.enabled ? 'btn-danger' : 'btn-success'" (click)="onToggleStatusFromModal()" style="flex: 1;">
+          {{ selectedUser?.enabled ? '🛑 Disable User' : '✅ Enable User' }}
+        </button>
+        <button class="btn btn-danger" (click)="onDeleteUserFromModal()" style="flex: 1;">
+          🗑️ Delete User
+        </button>
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" (click)="closeUserModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create User Modal -->
+  <div class="modal-backdrop" *ngIf="showCreateModal">
+    <div class="modal-card">
+      <h3>➕ Create New User</h3>
+      <form (ngSubmit)="createUser()">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" class="form-control" [(ngModel)]="newUsername" name="newUsername" required placeholder="Enter username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" class="form-control" [(ngModel)]="newPassword" name="newPassword" required placeholder="Enter password">
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select class="form-control" [(ngModel)]="newRole" name="newRole">
+            <option value="USER">USER</option>
+            <option value="ADMIN">ADMIN</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" (click)="showCreateModal = false">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

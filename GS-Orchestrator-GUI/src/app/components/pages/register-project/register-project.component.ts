@@ -12,7 +12,7 @@ import { OrchestratorService } from '../../../orchestrator.service';
   styleUrls: ['./register-project.component.css']
 })
 export class RegisterProjectComponent implements OnInit {
-  activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' = 'register';
+  activeTab: string = 'register';
   projectName = '';
   projectPath = '';
   backendType = 'node-ts';

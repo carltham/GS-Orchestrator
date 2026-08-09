@@ -10,8 +10,8 @@ import { ServerScannerService } from './ServerScannerService';
 const SERVICE_TYPE_BASE_PORTS: Record<string, number> = {
   'node-ts': 3000,
   'backend': 8080,
-  'frontend': 4200,
-  'angular': 4200,
+  'frontend': 9001,
+  'angular': 9001,
   'react': 5173,
   'vite': 5173,
   'database': 5433,

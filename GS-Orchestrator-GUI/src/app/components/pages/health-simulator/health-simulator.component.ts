@@ -12,11 +12,12 @@ import { OrchestratorService } from '../../../orchestrator.service';
   styleUrls: ['./health-simulator.component.css']
 })
 export class HealthSimulatorComponent implements OnInit {
-  activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' = 'health';
+  activeTab: string = 'health';
   projectName = 'GS-Orchestrator';
   statusOption = 'ok';
   uptime = 3600;
   healthAlert = '';
+  availableProjects: string[] = ['GS-Orchestrator'];
 
   constructor(
     private appState: AppStateService,
@@ -26,6 +27,29 @@ export class HealthSimulatorComponent implements OnInit {
   ngOnInit(): void {
     this.appState.state$.subscribe((state: AppState) => {
       this.activeTab = state.activeTab;
+      
+      // Build project options list
+      const projects = new Set<string>();
+      projects.add('GS-Orchestrator');
+      
+      state.projectsList.forEach(p => {
+        if (p.name) projects.add(p.name);
+      });
+      
+      state.unregisteredServers.forEach(u => {
+        if (u.projectName) {
+          projects.add(u.projectName);
+        } else if (u.type) {
+          projects.add(`${u.type} (Port ${u.port})`);
+        } else {
+          projects.add(`Port ${u.port}`);
+        }
+      });
+
+      this.availableProjects = Array.from(projects);
+      if (!this.availableProjects.includes(this.projectName) && this.availableProjects.length > 0) {
+        this.projectName = this.availableProjects[0];
+      }
     });
   }
 

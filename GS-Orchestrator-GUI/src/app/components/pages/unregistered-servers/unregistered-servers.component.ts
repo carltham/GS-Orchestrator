@@ -11,7 +11,7 @@ import { UnregisteredServer } from '../../../orchestrator.service';
   styleUrls: ['./unregistered-servers.component.css']
 })
 export class UnregisteredServersComponent implements OnInit {
-  activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' = 'unregistered';
+  activeTab: string = 'unregistered';
   unregisteredServers: UnregisteredServer[] = [];
 
   constructor(private appState: AppStateService) {}

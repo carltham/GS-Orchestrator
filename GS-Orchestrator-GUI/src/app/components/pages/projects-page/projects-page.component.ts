@@ -12,7 +12,7 @@ import { StateModalComponent } from '../../modals/state-modal/state-modal.compon
   styleUrls: ['./projects-page.component.css']
 })
 export class ProjectsPageComponent implements OnInit {
-  activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' = 'projects';
+  activeTab: string = 'projects';
   projectsList: ProjectEntry[] = [];
   showStateModal = false;
   selectedProject: ProjectEntry | null = null;

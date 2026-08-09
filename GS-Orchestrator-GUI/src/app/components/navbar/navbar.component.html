@@ -29,4 +29,10 @@
     data-testid="nav-tab-health">
     Health Simulator
   </button>
+  <button *ngIf="isSuperAdmin" class="nav-tab" 
+    [class.active]="activeTab === 'users'" 
+    (click)="setTab('users')" 
+    data-testid="nav-tab-users">
+    User Manager
+  </button>
 </nav>

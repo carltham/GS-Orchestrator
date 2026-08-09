@@ -10,7 +10,7 @@ import { AppStateService, AppState } from '../../../services/app-state.service';
   styleUrls: ['./home-page.component.css']
 })
 export class HomePageComponent implements OnInit {
-  activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' = 'home';
+  activeTab: string = 'home';
   projectsList: any[] = [];
   orchestratorPort = 9000;
   unregisteredServers: any[] = [];

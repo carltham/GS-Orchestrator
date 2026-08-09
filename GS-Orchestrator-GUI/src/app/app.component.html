@@ -1,28 +1,62 @@
 <div class="container">
   <!-- Header -->
   <header>
-    <div>
+    <div class="header-top">
       <h1>GS-Orchestrator Control Center</h1>
-      <div class="installer-links" style="margin-top: 5px; display: flex; align-items: center; gap: 10px;">
+    </div>
+    <div class="header-middle" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 15px;">
+      <div class="installer-links" style="display: flex; align-items: center; gap: 10px;">
         <span style="color: var(--text-muted, #94a3b8);">Client Installers: </span>
         <a href="http://localhost:9000/install.sh" target="_blank" class="btn" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; text-decoration: none; padding: 4px 10px; font-size: 0.85rem;">curl install.sh</a>
         <a href="http://localhost:9000/install.js" target="_blank" class="btn" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; text-decoration: none; padding: 4px 10px; font-size: 0.85rem;">curl install.js</a>
       </div>
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <span data-testid="system-health-badge" class="badge" [ngClass]="{'badge-healthy': healthStatus.toLowerCase().includes('healthy') || healthStatus.toLowerCase().includes('ok'), 'badge-degraded': !healthStatus.toLowerCase().includes('healthy') && !healthStatus.toLowerCase().includes('ok')}">
+          Status: {{ healthStatus }}
+        </span>
+        <div *ngIf="isAuthenticated" style="display: flex; align-items: center; gap: 10px;">
+          <span class="user-badge">
+            👤 {{ currentUser?.username || 'Authenticated' }}
+          </span>
+          <button class="btn btn-sm btn-secondary" (click)="logout()" data-testid="btn-logout" style="padding: 4px 10px; font-size: 0.85rem;">
+            🚪 Logout
+          </button>
+        </div>
+      </div>
     </div>
-    <div>
-      <span data-testid="system-health-badge" class="badge" [ngClass]="{'badge-healthy': healthStatus.toLowerCase().includes('healthy') || healthStatus.toLowerCase().includes('ok'), 'badge-degraded': !healthStatus.toLowerCase().includes('healthy') && !healthStatus.toLowerCase().includes('ok')}">
-        Status: {{ healthStatus }}
-      </span>
+    <div class="header-bottom">
+      <app-navbar></app-navbar>
     </div>
   </header>
 
-  <!-- Navigation -->
-  <app-navbar></app-navbar>
-
-  <!-- Pages -->
+  <!-- Home Page -->
   <app-home-page></app-home-page>
-  <app-projects-page></app-projects-page>
-  <app-register-project></app-register-project>
-  <app-unregistered-servers></app-unregistered-servers>
-  <app-health-simulator></app-health-simulator>
+
+  <!-- Protected Pages (Requires Authentication) -->
+  <div *ngIf="isAuthenticated">
+    <app-projects-page></app-projects-page>
+    <app-register-project></app-register-project>
+    <app-unregistered-servers></app-unregistered-servers>
+    <app-health-simulator></app-health-simulator>
+    <app-users-page></app-users-page>
+  </div>
+
+  <!-- Login Prompt for Protected Pages -->
+  <div *ngIf="!isAuthenticated && currentTab !== 'home'" class="login-prompt">
+    <div class="prompt-card">
+      <h3>🔐 Login Required</h3>
+      <p>You need to log in to access the administration and orchestration features.</p>
+      <button class="btn btn-primary" (click)="showLoginModal = true">
+        Click here to login
+      </button>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <app-login-modal
+    [isOpen]="showLoginModal"
+    (loginSuccess)="onLoginSuccess()">
+  </app-login-modal>
 </div>
+
+

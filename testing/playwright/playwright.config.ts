@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:4200',
+    baseURL: 'http://localhost:9001',
     trace: 'on-first-retry',
   },
   projects: [
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm --prefix ../../GS-Orchestrator-GUI start',
-    url: 'http://localhost:4200',
+    url: 'http://localhost:9001',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

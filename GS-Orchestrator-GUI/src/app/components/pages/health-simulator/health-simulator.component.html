@@ -8,7 +8,9 @@
     <form (ngSubmit)="sendHealthReport()">
       <div class="form-group">
         <label>Project Name</label>
-        <input type="text" class="form-control" [(ngModel)]="projectName" name="projectName" data-testid="input-health-project-name" placeholder="e.g. GS-Orchestrator" required>
+        <select class="form-control" [(ngModel)]="projectName" name="projectName" data-testid="input-health-project-name" required>
+          <option *ngFor="let proj of availableProjects" [value]="proj">{{ proj }}</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Health Status</label>
