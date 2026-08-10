@@ -11,7 +11,7 @@
     "startupHandler": "node startupHandler.js"
   },
   "dependencies": {
-    "@gs/orchestrator-client": "file:../lib/orchestrator-client",
+    "@gs/process-client": "file:../lib/process-client",
     "express": "^4.18.2",
     "gs-orchestrator": "file:",
     "jsonwebtoken": "^9.0.0",

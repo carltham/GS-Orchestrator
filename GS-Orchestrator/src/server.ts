@@ -5,6 +5,7 @@
 
 import express, { Express } from 'express';
 import * as path from 'path';
+import { ProcessClient } from '@gs/process-client';
 import { createHealthRoutes } from './routes/healthRoutes';
 import { createRegistrationRoutes } from './routes/registrationRoutes';
 import { createRegistryRoutes } from './routes/registryRoutes';
@@ -126,5 +127,16 @@ if (require.main === module) {
     }
 
     serverScanner.startPeriodicScan(30000);
+
+    // Initialize and start ProcessClient to connect to ProcessServer (:9999)
+    try {
+      const processClient = new ProcessClient({
+        projectName: SELF_PROJECT_NAME || 'GS-Orchestrator'
+      });
+      await processClient.start();
+      console.log('✅ Connected to ProcessServer (:9999) via ProcessClient');
+    } catch (processClientErr: any) {
+      console.warn(`⚠️ Could not connect ProcessClient to ProcessServer (:9999): ${processClientErr.message}`);
+    }
   });
 }

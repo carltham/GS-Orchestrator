@@ -6,7 +6,7 @@ export interface ProcessClientConfig {
   processServerUrl?: string;
   pollIntervalMs?: number;
   heartbeatIntervalMs?: number;
-  adapter: IProcessAdapter;
+  adapter?: IProcessAdapter;
 }
 
 export class ProcessClient {
@@ -14,7 +14,7 @@ export class ProcessClient {
   private processServerUrl: string;
   private pollIntervalMs: number;
   private heartbeatIntervalMs: number;
-  private adapter: IProcessAdapter;
+  private adapter: IProcessAdapter | null = null;
   private pollTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
@@ -24,7 +24,18 @@ export class ProcessClient {
     this.processServerUrl = config.processServerUrl || process.env.PROCESS_SERVER_URL || 'http://localhost:9999';
     this.pollIntervalMs = config.pollIntervalMs || 15000;
     this.heartbeatIntervalMs = config.heartbeatIntervalMs || 15000;
-    this.adapter = config.adapter;
+    
+    if (config.adapter) {
+      this.adapter = config.adapter;
+    } else {
+      try {
+        const path = require('path');
+        const AdapterClass = require(path.resolve(process.cwd(), 'ProcessAdapter.js'));
+        this.adapter = new AdapterClass();
+      } catch (err: any) {
+        console.warn(`[ProcessClient] Could not auto-load ProcessAdapter.js: ${err.message}`);
+      }
+    }
   }
 
   public async start(): Promise<void> {
@@ -50,11 +61,19 @@ export class ProcessClient {
 
   private async sendHeartbeat(): Promise<void> {
     try {
-      const status = await this.adapter.getStatus();
+      let statusStr = 'STOPPED';
+      let pidNum: number | null = null;
+
+      if (this.adapter) {
+        const status = await this.adapter.getStatus();
+        statusStr = status.status;
+        pidNum = status.pid || null;
+      }
+
       const payload = {
         projectName: this.projectName,
-        status: status.status,
-        pid: status.pid,
+        status: statusStr,
+        pid: pidNum,
         timestamp: new Date().toISOString()
       };
 
@@ -78,13 +97,15 @@ export class ProcessClient {
 
       for (const signal of signals) {
         console.log(`[ProcessClient] Received signal ${signal.action} for ${this.projectName}`);
-        if (signal.action === 'START') {
-          await this.adapter.start(signal.ports);
-        } else if (signal.action === 'STOP') {
-          await this.adapter.stop();
-        } else if (signal.action === 'SHUTDOWN') {
-          await this.adapter.stop();
-          process.exit(0);
+        if (this.adapter) {
+          if (signal.action === 'START') {
+            await this.adapter.start(signal.ports);
+          } else if (signal.action === 'STOP') {
+            await this.adapter.stop();
+          } else if (signal.action === 'SHUTDOWN') {
+            await this.adapter.stop();
+            process.exit(0);
+          }
         }
         await this.sendHeartbeat();
       }

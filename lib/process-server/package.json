@@ -4,7 +4,7 @@
   "description": "Standalone process server engine for GS-Orchestrator running on port 9999",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && mkdir -p dist/templates && cp src/templates/* dist/templates/",
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts"
   },
