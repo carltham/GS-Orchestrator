@@ -1,5 +1,5 @@
 import http from 'http';
-import { detectProjectName } from '../config';
+import { detectProjectName, readExistingAppConfig } from '../config';
 import { detectComponentsAndFrameworks } from '../discovery/detector';
 import {
   ApplicationHealth,
@@ -92,6 +92,33 @@ export async function registerWithOrchestrator(
     targetServiceTypes.database = process.env.DATABASE_SERVICE_TYPE;
   }
 
+  const requestedBasePorts: BasePortsConfig = {
+    ...basePortsParam,
+  };
+
+  const existingConfig = readExistingAppConfig();
+  if (existingConfig) {
+    if (!requestedBasePorts.backend && existingConfig.backend) {
+      requestedBasePorts.backend = existingConfig.backend;
+    }
+    if (!requestedBasePorts.frontend && existingConfig.frontend) {
+      requestedBasePorts.frontend = existingConfig.frontend;
+    }
+    if (!requestedBasePorts.database && existingConfig.database) {
+      requestedBasePorts.database = existingConfig.database;
+    }
+  }
+
+  if (!requestedBasePorts.backend && process.env.BASE_BACKEND_PORT) {
+    requestedBasePorts.backend = parseInt(process.env.BASE_BACKEND_PORT, 10);
+  }
+  if (!requestedBasePorts.frontend && process.env.BASE_FRONTEND_PORT) {
+    requestedBasePorts.frontend = parseInt(process.env.BASE_FRONTEND_PORT, 10);
+  }
+  if (!requestedBasePorts.database && process.env.BASE_DATABASE_PORT) {
+    requestedBasePorts.database = parseInt(process.env.BASE_DATABASE_PORT, 10);
+  }
+
   if (Object.keys(targetServiceTypes).length === 0) {
     targetServiceTypes.backend = 'node-ts';
   }
@@ -101,7 +128,7 @@ export async function registerWithOrchestrator(
       projectName,
       path: process.cwd(),
       serviceTypes: targetServiceTypes,
-      basePorts: basePortsParam,
+      basePorts: Object.keys(requestedBasePorts).length > 0 ? requestedBasePorts : undefined,
     });
 
     const reqOptions = {

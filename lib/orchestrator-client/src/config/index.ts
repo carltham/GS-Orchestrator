@@ -38,6 +38,17 @@ export function resolveConfigFilePath(): string {
   return path.join(resolveConfigDir(), 'app-config.json');
 }
 
+export function readExistingAppConfig(): Partial<PrestartConfig> | null {
+  try {
+    const filePath = resolveConfigFilePath();
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (e) {}
+  return null;
+}
+
 export function writeConfig(ports: OrchestratorResponse): void {
   const projectName = detectProjectName();
 

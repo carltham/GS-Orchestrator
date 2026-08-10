@@ -93,6 +93,44 @@ export async function runPrestart(): Promise<OrchestratorResponse> {
   try {
     console.log(`🔍 Prestart agent: Querying GS-Orchestrator on ${host}:${port}...`);
     const ports = await registerWithOrchestrator();
+
+    const expectedDbPort = process.env.BASE_DATABASE_PORT
+      ? parseInt(process.env.BASE_DATABASE_PORT, 10)
+      : undefined;
+    const expectedBackendPort = process.env.BASE_BACKEND_PORT
+      ? parseInt(process.env.BASE_BACKEND_PORT, 10)
+      : undefined;
+    const expectedFrontendPort = process.env.BASE_FRONTEND_PORT
+      ? parseInt(process.env.BASE_FRONTEND_PORT, 10)
+      : undefined;
+
+    const strictEnforcement = process.env.STRICT_PORT_ENFORCEMENT === 'true';
+
+    let mismatch = false;
+    if (expectedDbPort && ports.database !== expectedDbPort) {
+      console.error(
+        `🚨 CRITICAL PORT ALARM: Requested DB port ${expectedDbPort} was hijacked/bypassed! Allocated port: ${ports.database}`
+      );
+      mismatch = true;
+    }
+    if (expectedBackendPort && ports.backend !== expectedBackendPort) {
+      console.error(
+        `🚨 CRITICAL PORT ALARM: Requested Backend port ${expectedBackendPort} was hijacked/bypassed! Allocated port: ${ports.backend}`
+      );
+      mismatch = true;
+    }
+    if (expectedFrontendPort && ports.frontend !== expectedFrontendPort) {
+      console.error(
+        `🚨 CRITICAL PORT ALARM: Requested Frontend port ${expectedFrontendPort} was hijacked/bypassed! Allocated port: ${ports.frontend}`
+      );
+      mismatch = true;
+    }
+
+    if (mismatch && strictEnforcement) {
+      console.error(`🛑 STRICT PORT ENFORCEMENT: Shutting down client processes due to port conflict.`);
+      process.exit(1);
+    }
+
     writeConfig(ports);
     console.log(`✅ Prestart agent complete`);
     return ports;
