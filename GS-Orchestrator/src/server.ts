@@ -19,7 +19,7 @@ import { UserService } from './services/UserService';
 import { detectOwnProjectName } from './utils/selfDetector';
 
 const app: Express = express();
-const PORT = 9000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
 const SELF_PROJECT_NAME = detectOwnProjectName();
 
 // Persistence Paths
@@ -64,6 +64,23 @@ app.use(createRegistrationRoutes(registry, portAllocator, serverScanner, SELF_PR
 app.use(createRegistryRoutes(registry, serverScanner));
 app.use(createScannerRoutes(serverScanner));
 app.use('/api/signals', signalRoutes);
+
+// Static GUI Asset Hosting (Angular GS-Orchestrator-GUI)
+const guiDistPath = path.join(__dirname, '..', '..', 'GS-Orchestrator-GUI', 'dist', 'gs-orchestrator-gui', 'browser');
+app.use(express.static(guiDistPath));
+
+// SPA Fallback: Route all non-API requests to index.html
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  const indexPath = path.join(guiDistPath, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      res.status(200).send('<h1>GS-Orchestrator Control Center</h1><p>GUI build pending or not found.</p>');
+    }
+  });
+});
 
 export { app, registry, serverScanner, portAllocator, userService, SELF_PROJECT_NAME };
 

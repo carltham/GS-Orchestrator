@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:9001',
+    baseURL: 'http://localhost:10000',
     trace: 'on-first-retry',
   },
   projects: [
@@ -17,10 +17,4 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'npm --prefix ../../GS-Orchestrator-GUI start',
-    url: 'http://localhost:9001',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
 });

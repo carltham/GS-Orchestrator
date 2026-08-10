@@ -38,7 +38,7 @@ test.describe('GS-Orchestrator GUI - Top Down E2E Suite', () => {
     // Orchestrator Port Card
     const portCard = page.locator('[data-testid="orchestrator-port-card"]');
     await expect(portCard).toBeVisible();
-    await expect(portCard).toContainText('9000');
+    await expect(portCard).toContainText('10000');
   });
 
   test('should show login prompt for protected pages', async ({ page }) => {
