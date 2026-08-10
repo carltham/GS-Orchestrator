@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 1120" style="background:#0f172a; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;">
+  <defs>
+    <linearGradient id="phase1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.4" />
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#60a5fa" />
+    </marker>
+    <marker id="arrowRet" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399" />
+    </marker>
+    <marker id="arrowWarn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#f87171" />
+    </marker>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="30" y="25" width="1090" height="60" rx="10" fill="url(#headerGrad)" filter="url(#shadow)" />
+  <text x="575" y="62" fill="#ffffff" font-size="22" font-weight="bold" text-anchor="middle">GS-Orchestrator Process Control &amp; Client Workflow</text>
+
+  <!-- Participant Headers -->
+  <!-- 1. Developer / Project -->
+  <rect x="40" y="110" width="160" height="45" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />
+  <text x="120" y="138" fill="#f8fafc" font-size="14" font-weight="600" text-anchor="middle">👨‍💻 Dev / Target Project</text>
+
+  <!-- 2. ProcessClient -->
+  <rect x="240" y="110" width="180" height="45" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" />
+  <text x="330" y="138" fill="#f8fafc" font-size="14" font-weight="600" text-anchor="middle">⚙️ ProcessClient</text>
+
+  <!-- 3. ProcessAdapter.js -->
+  <rect x="460" y="110" width="180" height="45" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="2" />
+  <text x="550" y="138" fill="#f8fafc" font-size="14" font-weight="600" text-anchor="middle">🧩 ProcessAdapter.js</text>
+
+  <!-- 4. config/app-config.json -->
+  <rect x="680" y="110" width="180" height="45" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2" />
+  <text x="770" y="138" fill="#f8fafc" font-size="14" font-weight="600" text-anchor="middle">📄 app-config.json</text>
+
+  <!-- 5. ProcessServer -->
+  <rect x="900" y="110" width="200" height="45" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2" />
+  <text x="1000" y="138" fill="#f8fafc" font-size="14" font-weight="600" text-anchor="middle">🖥️ ProcessServer (:9999)</text>
+
+  <!-- Lifelines -->
+  <line x1="120" y1="155" x2="120" y2="1060" stroke="#334155" stroke-width="2" stroke-dasharray="4 4" />
+  <line x1="330" y1="155" x2="330" y2="1060" stroke="#334155" stroke-width="2" stroke-dasharray="4 4" />
+  <line x1="550" y1="155" x2="550" y2="1060" stroke="#334155" stroke-width="2" stroke-dasharray="4 4" />
+  <line x1="770" y1="155" x2="770" y2="1060" stroke="#334155" stroke-width="2" stroke-dasharray="4 4" />
+  <line x1="1000" y1="155" x2="1000" y2="1060" stroke="#334155" stroke-width="2" stroke-dasharray="4 4" />
+
+  <!-- PHASE 1 BOX -->
+  <rect x="30" y="180" width="1090" height="230" rx="8" fill="#1e293b" fill-opacity="0.5" stroke="#3b82f6" stroke-width="1.5" />
+  <text x="45" y="205" fill="#60a5fa" font-size="14" font-weight="bold">Phase 1: Prestart Configuration &amp; Port Confirmation</text>
+
+  <!-- Message 1: npm start -->
+  <line x1="120" y1="230" x2="322" y2="230" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="221" y="222" fill="#e2e8f0" font-size="12" text-anchor="middle">1. npm start (ProcessClient Launcher)</text>
+
+  <!-- Message 2: Read config -->
+  <line x1="330" y1="260" x2="762" y2="260" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="546" y="252" fill="#e2e8f0" font-size="12" text-anchor="middle">2. Read existing ports (if present)</text>
+
+  <!-- Message 3: POST /api/register -->
+  <line x1="330" y1="290" x2="992" y2="290" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="661" y="282" fill="#e2e8f0" font-size="12" text-anchor="middle">3. POST /api/register (Fallback: ProcessAdapter.js.start() if offline)</text>
+
+  <!-- Server Internal Check -->
+  <rect x="930" y="308" width="140" height="36" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+  <text x="1000" y="324" fill="#94a3b8" font-size="10" text-anchor="middle">Check Port Ownership</text>
+  <text x="1000" y="337" fill="#94a3b8" font-size="10" text-anchor="middle">&amp; Reserve/Allocate Ports</text>
+
+  <!-- Return 4: Return confirmed ports -->
+  <line x1="1000" y1="365" x2="338" y2="365" stroke="#34d399" stroke-width="2" marker-end="url(#arrowRet)" stroke-dasharray="3 3" />
+  <text x="669" y="357" fill="#34d399" font-size="12" text-anchor="middle">4. Return confirmed ports {backend, frontend, database, ticket}</text>
+
+  <!-- Message 5: Write config -->
+  <line x1="330" y1="390" x2="762" y2="390" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="546" y="382" fill="#e2e8f0" font-size="12" text-anchor="middle">5. Write confirmed ports to app-config.json</text>
+
+  <!-- PHASE 2 BOX -->
+  <rect x="30" y="430" width="1090" height="230" rx="8" fill="#1e293b" fill-opacity="0.5" stroke="#06b6d4" stroke-width="1.5" />
+  <text x="45" y="455" fill="#22d3ee" font-size="14" font-weight="bold">Phase 2: Sequential Launch via ProcessAdapter.js</text>
+
+  <!-- Message 6: Kill active if ports changed -->
+  <line x1="330" y1="480" x2="542" y2="480" stroke="#f87171" stroke-width="2" marker-end="url(#arrowWarn)" stroke-dasharray="3 3" />
+  <text x="436" y="472" fill="#fca5a5" font-size="12" text-anchor="middle">6. ProcessAdapter.js.stop() (if ports changed)</text>
+
+  <!-- Message 7: Launch Services -->
+  <line x1="330" y1="520" x2="542" y2="520" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="436" y="512" fill="#e2e8f0" font-size="12" text-anchor="middle">7. ProcessAdapter.js.start(ports)</text>
+
+  <!-- Message 8: Launch Backend -->
+  <line x1="345" y1="560" x2="572" y2="560" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="458" y="552" fill="#e2e8f0" font-size="12" text-anchor="middle">8. Launch Backend Process (node / ts-node)</text>
+  <text x="458" y="575" fill="#94a3b8" font-size="11" text-anchor="middle">(Poll http://localhost:PORT/health until ready)</text>
+
+  <!-- Message 9: Launch Frontend -->
+  <line x1="345" y1="615" x2="572" y2="615" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="458" y="607" fill="#e2e8f0" font-size="12" text-anchor="middle">9. Launch Frontend Process (vite / ng serve)</text>
+
+  <!-- PHASE 3 BOX -->
+  <rect x="30" y="680" width="1090" height="180" rx="8" fill="#1e293b" fill-opacity="0.5" stroke="#10b981" stroke-width="1.5" />
+  <text x="45" y="705" fill="#34d399" font-size="14" font-weight="bold">Phase 3: Live Registration &amp; Continuous Health Loop</text>
+
+  <!-- Message 10: POST /api/register re-confirm -->
+  <line x1="345" y1="735" x2="1017" y2="735" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="680" y="727" fill="#e2e8f0" font-size="12" text-anchor="middle">10. POST /api/register (Confirm live registration)</text>
+
+  <!-- Return 11: Registration confirmed -->
+  <line x1="1025" y1="765" x2="353" y2="765" stroke="#34d399" stroke-width="2" marker-end="url(#arrowRet)" stroke-dasharray="3 3" />
+  <text x="680" y="757" fill="#34d399" font-size="12" text-anchor="middle">11. Set project status = "running" &amp; confirm</text>
+
+  <!-- Loop: Heartbeats -->
+  <rect x="270" y="785" x2="1050" width="770" height="55" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 4" />
+  <text x="280" y="815" fill="#fbbf24" font-size="11" font-weight="bold">Loop (Every 15s)</text>
+  <text x="660" y="808" fill="#e2e8f0" font-size="11" text-anchor="middle">POST /api/health {status: ok/degraded, uptime}</text>
+  <text x="660" y="826" fill="#e2e8f0" font-size="11" text-anchor="middle">GET /api/signals/:projectName</text>
+
+  <!-- PHASE 4 BOX -->
+  <rect x="30" y="880" width="1090" height="160" rx="8" fill="#1e293b" fill-opacity="0.5" stroke="#ef4444" stroke-width="1.5" />
+  <text x="45" y="905" fill="#f87171" font-size="14" font-weight="bold">Phase 4: Stop Signal Handling &amp; Persistent Monitoring</text>
+
+  <!-- Message 12: Stop signal -->
+  <line x1="1025" y1="930" x2="353" y2="930" stroke="#f87171" stroke-width="2" marker-end="url(#arrowWarn)" stroke-dasharray="3 3" />
+  <text x="680" y="922" fill="#fca5a5" font-size="12" text-anchor="middle">12. Stop signal received from Orchestrator</text>
+
+  <!-- Message 13: Terminate local child processes -->
+  <line x1="345" y1="960" x2="572" y2="960" stroke="#f87171" stroke-width="2" marker-end="url(#arrowWarn)" stroke-dasharray="3 3" />
+  <text x="458" y="952" fill="#fca5a5" font-size="12" text-anchor="middle">13. Terminate Backend &amp; Frontend child processes</text>
+
+  <!-- Message 14: Confirm stopped -->
+  <line x1="345" y1="995" x2="1017" y2="995" stroke="#34d399" stroke-width="2" marker-end="url(#arrowRet)" />
+  <text x="680" y="987" fill="#34d399" font-size="12" text-anchor="middle">14. POST /api/register/:projectName/stopped (Update status = "stopped")</text>
+
+  <!-- Client persistent note -->
+  <rect x="250" y="1015" x2="440" width="190" height="20" rx="4" fill="#334155" />
+  <text x="345" y="1029" fill="#f8fafc" font-size="10" text-anchor="middle">Client continues signal monitoring loop</text>
+</svg>

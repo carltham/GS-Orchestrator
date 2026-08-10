@@ -50,26 +50,36 @@ export class PortAllocatorService {
     const typeKey = (serverType || serviceKey).toLowerCase();
     const basePort = customBasePort || SERVICE_TYPE_BASE_PORTS[typeKey] || 3000;
 
-    // Collect all currently allocated ports across all projects to prevent conflicts
-    const usedPorts = new Set<number>();
-    for (const proj of Object.values(registryState.projects)) {
+    // Collect ports allocated to OTHER projects
+    const usedPortsByOtherProjects = new Set<number>();
+    for (const [otherName, proj] of Object.entries(registryState.projects)) {
+      if (otherName === projectName) continue;
       if (proj.components) {
         for (const p of Object.values(proj.components)) {
-          usedPorts.add(p);
+          usedPortsByOtherProjects.add(p);
         }
       }
     }
 
-    // Include ports from unregistered servers
+    // Collect ports occupied by UNREGISTERED external services
+    const externalOccupiedPorts = new Set<number>();
     if (this.scanner) {
       const unregistered = this.scanner.loadData();
       for (const s of unregistered.servers) {
-        usedPorts.add(s.port);
+        // If process belongs to the client project itself, don't consider it external conflict
+        if (s.projectPath && existingProject?.path) {
+          const resolvedServerPath = require('path').resolve(s.projectPath);
+          const resolvedProjPath = require('path').resolve(existingProject.path);
+          if (resolvedServerPath === resolvedProjPath || resolvedServerPath.startsWith(resolvedProjPath + require('path').sep)) {
+            continue;
+          }
+        }
+        externalOccupiedPorts.add(s.port);
       }
     }
 
     let candidatePort = basePort;
-    while (usedPorts.has(candidatePort)) {
+    while (usedPortsByOtherProjects.has(candidatePort) || externalOccupiedPorts.has(candidatePort)) {
       candidatePort++;
     }
 

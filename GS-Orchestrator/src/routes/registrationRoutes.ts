@@ -57,7 +57,7 @@ export function createRegistrationRoutes(
   });
 
   // POST /api/register/:projectName/stopped
-  // Mark a project as stopped and remove from registry
+  // Mark a project as stopped (keep in registry)
   router.post('/api/register/:projectName/stopped', async (req: Request, res: Response) => {
     try {
       const projectName = req.params.projectName;
@@ -68,12 +68,13 @@ export function createRegistrationRoutes(
         });
       }
 
-      const success = registry.unregisterProject(projectName);
-
-      if (success) {
-        console.log(`✅ Project "${projectName}" stopped and removed from registry`);
+      const project = registry.getProject(projectName);
+      if (project) {
+        project.status = 'stopped';
+        registry.updateProject(projectName, project);
+        console.log(`✅ Project "${projectName}" marked as stopped in registry`);
         return res.json({
-          message: `Project "${projectName}" has been stopped and removed from registry`,
+          message: `Project "${projectName}" status updated to stopped`,
           projectName,
           status: 'stopped',
           timestamp: new Date().toISOString(),

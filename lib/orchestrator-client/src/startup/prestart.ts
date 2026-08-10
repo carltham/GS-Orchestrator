@@ -18,35 +18,51 @@ export async function attemptStartupHandler(): Promise<boolean> {
   const tsFileScripts = path.join(rootDir, 'scripts', 'startupHandler.ts');
   const jsFileScripts = path.join(rootDir, 'scripts', 'startupHandler.js');
 
+  const targetModulePath = [jsFileRoot, tsFileRoot, jsFileScripts, tsFileScripts].find((p) => fs.existsSync(p));
+
+  if (targetModulePath) {
+    try {
+      if (targetModulePath.endsWith('.ts')) {
+        require('ts-node/register');
+      }
+      const imported = require(targetModulePath);
+      const handlerInstance = imported.default || imported.startupHandler || imported;
+
+      if (handlerInstance && typeof handlerInstance.start === 'function') {
+        console.log(`🚀 Invoking StartupHandler.start() from ${path.relative(rootDir, targetModulePath)}...`);
+        await handlerInstance.start();
+
+        const startTime = Date.now();
+        while (Date.now() - startTime < 15000) {
+          await new Promise((r) => setTimeout(r, 500));
+          const available = await isOrchestratorAvailable();
+          if (available) {
+            console.log('✅ GS-Orchestrator successfully started by StartupHandler!');
+            return true;
+          }
+        }
+        return false;
+      }
+    } catch (err) {
+      // Fallback to spawning process if require/import fails
+    }
+  }
+
   let command = '';
   let args: string[] = [];
 
   if (fs.existsSync(tsFileRoot)) {
-    command = 'npx';
-    args = ['--yes', 'ts-node', tsFileRoot];
+    command = 'node';
+    args = ['-r', 'ts-node/register', tsFileRoot];
   } else if (fs.existsSync(jsFileRoot)) {
     command = 'node';
     args = [jsFileRoot];
   } else if (fs.existsSync(tsFileScripts)) {
-    command = 'npx';
-    args = ['--yes', 'ts-node', tsFileScripts];
+    command = 'node';
+    args = ['-r', 'ts-node/register', tsFileScripts];
   } else if (fs.existsSync(jsFileScripts)) {
     command = 'node';
     args = [jsFileScripts];
-  } else {
-    const pkgPath = path.join(rootDir, 'package.json');
-    if (fs.existsSync(pkgPath)) {
-      try {
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-        if (pkg.scripts && (pkg.scripts['startupHandler'] || pkg.scripts['startup-handler'])) {
-          const scriptName = pkg.scripts['startupHandler'] ? 'startupHandler' : 'startup-handler';
-          command = 'npm';
-          args = ['run', scriptName];
-        }
-      } catch (e) {
-        // ignore JSON parse error
-      }
-    }
   }
 
   if (!command) {
@@ -64,8 +80,9 @@ export async function attemptStartupHandler(): Promise<boolean> {
     });
     child.unref();
 
+    // Poll the orchestrator server for up to 15 seconds to give server time to compile/bind
     const startTime = Date.now();
-    while (Date.now() - startTime < 10000) {
+    while (Date.now() - startTime < 15000) {
       await new Promise((r) => setTimeout(r, 500));
       const available = await isOrchestratorAvailable();
       if (available) {
@@ -144,13 +161,13 @@ export async function runPrestart(): Promise<OrchestratorResponse> {
         console.log(`✅ Prestart agent complete after startup handler recovery`);
         return ports;
       } catch (retryErr) {
-        // Fall through to exception
+        // Fall through
       }
     }
 
     throw new Error(
       `Fatal: GS-Orchestrator is unavailable on http://${host}:${port} ` +
-        `and no valid startup handler could restore it. Aborting process.`
+        `and executing local startupHandler.js did not restore service connectivity. Aborting process.`
     );
   }
 }

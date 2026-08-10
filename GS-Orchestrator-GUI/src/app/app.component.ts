@@ -76,6 +76,10 @@ export class AppComponent implements OnInit {
     this.refreshData();
   }
 
+  onRefreshClicked(): void {
+    this.refreshData();
+  }
+
   logout(): void {
     this.authService.logout();
     this.refreshData();

@@ -243,8 +243,12 @@ export class ServerScannerService {
     }
 
     const registeredPorts = new Set<number>();
+    const registeredProjectPaths: string[] = [];
     const refreshedRegistry = this.registry.getState();
     for (const proj of Object.values(refreshedRegistry.projects)) {
+      if (proj.path) {
+        registeredProjectPaths.push(path.resolve(proj.path));
+      }
       if (proj.components) {
         for (const port of Object.values(proj.components)) {
           registeredPorts.add(port);
@@ -265,6 +269,22 @@ export class ServerScannerService {
         if (occupied) {
           const type = await this.probeHttpType(p);
           const processInfo = this.inspectProcessOnPort(p);
+
+          // Check if process projectPath belongs to any registered project directory
+          let belongsToRegisteredProject = false;
+          if (processInfo.projectPath) {
+            const resolvedProcPath = path.resolve(processInfo.projectPath);
+            for (const regPath of registeredProjectPaths) {
+              if (resolvedProcPath === regPath || resolvedProcPath.startsWith(regPath + path.sep)) {
+                belongsToRegisteredProject = true;
+                break;
+              }
+            }
+          }
+
+          if (belongsToRegisteredProject) {
+            continue;
+          }
 
           detectedServers.push({
             port: p,

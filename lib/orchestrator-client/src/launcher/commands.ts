@@ -31,7 +31,7 @@ export function resolveBackendCommand(): { command: string; args: string[] } {
   const serverTs = findFileRecursive('server.ts') || findFileRecursive('index.ts');
   if (serverTs) {
     const relPath = path.relative(process.cwd(), serverTs);
-    return { command: 'npx', args: ['--yes', 'ts-node', relPath] };
+    return { command: 'node', args: ['-r', 'ts-node/register', relPath] };
   }
 
   const serverJs = findFileRecursive('server.js') || findFileRecursive('index.js');
@@ -44,19 +44,28 @@ export function resolveBackendCommand(): { command: string; args: string[] } {
 }
 
 export function resolveFrontendCommand(port: number): { command: string; args: string[] } {
-  // Check for specialized project dirs
-  if (fs.existsSync('GS-Orchestrator-GUI/angular.json')) {
-    return { command: 'npm', args: ['--prefix', 'GS-Orchestrator-GUI', 'run', 'dev', '--', '--port', String(port)] };
-  }
-
   const angularJson = findFileRecursive('angular.json');
   if (angularJson) {
     const relDir = path.dirname(path.relative(process.cwd(), angularJson));
-    if (relDir && relDir !== '.') {
-      return { command: 'npm', args: ['--prefix', relDir, 'run', 'dev', '--', '--port', String(port)] };
+    const binPath = path.join(relDir && relDir !== '.' ? relDir : '.', 'node_modules', '.bin', 'ng');
+    if (fs.existsSync(binPath)) {
+      return { command: binPath, args: ['serve', '--port', String(port)] };
     }
-    return { command: 'npx', args: ['ng', 'serve', '--port', String(port)] };
+    return { command: 'ng', args: ['serve', '--port', String(port)] };
   }
+
+  const viteConfig = findFileRecursive('vite.config.ts') || findFileRecursive('vite.config.js');
+  if (viteConfig) {
+    const relDir = path.dirname(path.relative(process.cwd(), viteConfig));
+    const binPath = path.join(relDir && relDir !== '.' ? relDir : '.', 'node_modules', '.bin', 'vite');
+    if (fs.existsSync(binPath)) {
+      return { command: binPath, args: ['--port', String(port)] };
+    }
+    return { command: 'vite', args: ['--port', String(port)] };
+  }
+
+  return { command: 'node', args: ['dist/frontend/index.js'] };
+}
 
   const viteConfig = findFileRecursive('vite.config.ts') || findFileRecursive('vite.config.js');
   if (viteConfig) {

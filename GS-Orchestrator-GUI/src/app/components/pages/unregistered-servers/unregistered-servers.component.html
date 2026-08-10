@@ -10,16 +10,24 @@
         <table class="data-table">
           <thead>
             <tr>
+              <th>Project Name</th>
+              <th>Path</th>
+              <th>Command / Process</th>
               <th>Port</th>
               <th>Type</th>
               <th>Process PID</th>
+              <th>Detected At</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let s of unregisteredServers">
+              <td><strong>{{ s.projectName || 'Unmanaged System Service' }}</strong></td>
+              <td><code>{{ s.projectPath || 'N/A' }}</code></td>
+              <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="s.cmd || 'N/A'"><code>{{ s.cmd || 'N/A' }}</code></td>
               <td><strong>{{ s.port }}</strong></td>
-              <td>{{ s.type }}</td>
+              <td>{{ s.type || 'tcp-service' }}</td>
               <td><code>{{ s.pid || 'Unknown' }}</code></td>
+              <td>{{ s.detectedAt ? (s.detectedAt | date:'medium') : 'N/A' }}</td>
             </tr>
           </tbody>
         </table>

@@ -39,3 +39,9 @@ export interface RegistrationOptions {
   serviceTypes?: ServiceTypesConfig;
   basePorts?: BasePortsConfig;
 }
+
+export interface IStartupHandler {
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  getStatus?(): Promise<{ [service: string]: boolean }>;
+}

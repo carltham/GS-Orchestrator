@@ -11,6 +11,9 @@
         <a href="http://localhost:9000/install.js" target="_blank" class="btn" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; text-decoration: none; padding: 4px 10px; font-size: 0.85rem;">curl install.js</a>
       </div>
       <div style="display: flex; align-items: center; gap: 15px;">
+        <button class="btn btn-sm btn-primary" (click)="onRefreshClicked()" style="padding: 4px 10px; font-size: 0.85rem;">
+          🔄 Refresh Data
+        </button>
         <span data-testid="system-health-badge" class="badge" [ngClass]="{'badge-healthy': healthStatus.toLowerCase().includes('healthy') || healthStatus.toLowerCase().includes('ok'), 'badge-degraded': !healthStatus.toLowerCase().includes('healthy') && !healthStatus.toLowerCase().includes('ok')}">
           Status: {{ healthStatus }}
         </span>
