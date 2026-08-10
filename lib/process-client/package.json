@@ -1,0 +1,19 @@
+{
+  "name": "@gs/process-client",
+  "version": "1.0.0",
+  "description": "Runtime process client engine for GS-Orchestrator target projects",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.0",
+    "@types/node-fetch": "^2.6.4",
+    "typescript": "^5.1.6"
+  }
+}
