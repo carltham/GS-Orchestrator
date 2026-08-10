@@ -1,7 +1,7 @@
 # GS-Orchestrator Implementation Tasks Summary
 
 ## Overall Progress
-`[██░░░░░░░░░░░░░░░░░░] 11% (1/9 Tasks Completed)`
+`[████████░░░░░░░░░░░░] 44% (4/9 Tasks Completed)`
 
 ---
 
@@ -9,9 +9,9 @@
 
 ### Phase 1: Standalone ProcessServer Microservice (`lib/process-server/`)
 - [x] **[phase1-task01-scaffold-process-server.md](planning/tasks/done/phase1-task01-scaffold-process-server.md)**: Scaffold `lib/process-server/` (`package.json`, `tsconfig.json`, `src/server.ts` on port 9999)
-- [ ] **[phase1-task02-process-server-installer-endpoints.md](planning/tasks/todo/phase1-task02-process-server-installer-endpoints.md)**: Implement `curl` installer endpoints (`/install.sh`, `/install.js`)
-- [ ] **[phase1-task03-process-server-adapter-generator.md](planning/tasks/todo/phase1-task03-process-server-adapter-generator.md)**: Dynamic `ProcessAdapter.js` generator (`POST /api/installer/generate`)
-- [ ] **[phase1-task04-process-server-signals-heartbeats-shutdown.md](planning/tasks/todo/phase1-task04-process-server-signals-heartbeats-shutdown.md)**: Signals, heartbeats, & Orchestrator shutdown (`POST /api/orchestrator/shutdown`)
+- [x] **[phase1-task02-process-server-installer-endpoints.md](planning/tasks/done/phase1-task02-process-server-installer-endpoints.md)**: Implement `curl` installer endpoints (`/install.sh`, `/install.js`)
+- [x] **[phase1-task03-process-server-adapter-generator.md](planning/tasks/done/phase1-task03-process-server-adapter-generator.md)**: Dynamic `ProcessAdapter.js` generator (`POST /api/installer/generate`)
+- [x] **[phase1-task04-process-server-signals-heartbeats-shutdown.md](planning/tasks/done/phase1-task04-process-server-signals-heartbeats-shutdown.md)**: Signals, heartbeats, & Orchestrator shutdown (`POST /api/orchestrator/shutdown`)
 
 ### Phase 2: Runtime ProcessClient Library & Installer (`lib/process-client/`)
 - [ ] **[phase2-task05-scaffold-process-client.md](planning/tasks/todo/phase2-task05-scaffold-process-client.md)**: Scaffold `@gs/process-client` library & `IProcessAdapter` contract
