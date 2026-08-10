@@ -1,5 +1,5 @@
 import { ChildProcess, spawn } from 'child_process';
-import { registerWithOrchestrator, sendHealthReport, getSignalsForProject, acknowledgeSignals } from '../api/apiClient';
+import { registerWithOrchestrator, sendHealthReport, getSignalsForProject, acknowledgeSignals, confirmProjectStopped } from '../api/apiClient';
 import { detectProjectName } from '../config';
 import { runPrestart } from '../startup/prestart';
 import { ApplicationHealth, OrchestratorResponse } from '../types';
@@ -116,7 +116,8 @@ export class OrchestratedLauncher {
               console.log(`🛑 Stop signal received from Orchestrator for project: ${signal.projectName}`);
               this.killProcesses();
               await acknowledgeSignals(this.projectName);
-              console.log(`✅ Acknowledged stop signal and terminated processes`);
+              await confirmProjectStopped(this.projectName);
+              console.log(`✅ Acknowledged stop signal and confirmed project stopped`);
               process.exit(0);
             } else if (signal.type === 'restart') {
               console.log(`🔄 Restart signal received from Orchestrator`);

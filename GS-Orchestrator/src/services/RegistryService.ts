@@ -46,10 +46,29 @@ export class RegistryService {
   }
 
   /**
-   * Always load fresh data directly from disk
+   * Always load fresh data directly from disk and clean up stale stopping projects
    */
   private load(): RegistryData {
-    return this.ensureFileExists();
+    const data = this.ensureFileExists();
+    let updated = false;
+
+    for (const [name, proj] of Object.entries(data.projects)) {
+      if (proj.status === 'stopping') {
+        const lastUpdatedMs = new Date(proj.registeredAt || data.lastUpdated).getTime();
+        const twoMinutesMs = 2 * 60 * 1000;
+        if (Date.now() - lastUpdatedMs > twoMinutesMs) {
+          console.log(`🧹 Cleaning up stale stopping project entry "${name}"`);
+          delete data.projects[name];
+          updated = true;
+        }
+      }
+    }
+
+    if (updated) {
+      this.save(data);
+    }
+
+    return data;
   }
 
   /**

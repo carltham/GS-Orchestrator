@@ -184,6 +184,43 @@ export async function sendHealthReport(health: ApplicationHealth, targetUrl?: st
   });
 }
 
+export async function confirmProjectStopped(
+  projectName: string,
+  targetUrl?: string
+): Promise<boolean> {
+  let hostname = ORCHESTRATOR_HOST;
+  let port = ORCHESTRATOR_PORT;
+
+  if (targetUrl) {
+    try {
+      const urlObj = new URL(targetUrl);
+      hostname = urlObj.hostname;
+      port = parseInt(urlObj.port || '80', 10);
+    } catch (err) {
+      // use defaults
+    }
+  }
+
+  return new Promise((resolve) => {
+    const reqOptions = {
+      hostname,
+      port,
+      path: `/api/register/${encodeURIComponent(projectName)}/stopped`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const req = http.request(reqOptions, (res) => {
+      resolve(res.statusCode === 200);
+    });
+
+    req.on('error', () => resolve(false));
+    req.end();
+  });
+}
+
 export async function getRegistryCount(baseUrl?: string): Promise<number> {
   let hostname = ORCHESTRATOR_HOST;
   let port = ORCHESTRATOR_PORT;

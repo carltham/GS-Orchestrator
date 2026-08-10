@@ -212,9 +212,39 @@ export class ServerScannerService {
       [9323, 9323],
     ];
 
-    const registeredPorts = new Set<number>();
     const registryData = this.registry.getState();
-    for (const proj of Object.values(registryData.projects)) {
+
+    // 1. Verify active port status for all registered projects
+    for (const [projName, proj] of Object.entries(registryData.projects)) {
+      if (!proj.components || Object.keys(proj.components).length === 0) continue;
+
+      let occupiedCount = 0;
+      const totalPorts = Object.keys(proj.components).length;
+
+      for (const port of Object.values(proj.components)) {
+        const active = await this.isPortOccupied(port);
+        if (active) {
+          occupiedCount++;
+        }
+      }
+
+      let newStatus: 'running' | 'partially' | 'stopped' = 'stopped';
+      if (occupiedCount === totalPorts) {
+        newStatus = 'running';
+      } else if (occupiedCount > 0) {
+        newStatus = 'partially';
+      }
+
+      // Update status if it changed or if project was stuck in a stopping state while ports are active
+      if (proj.status !== newStatus || (proj.status as string) === 'stopping') {
+        proj.status = newStatus;
+        this.registry.updateProject(projName, proj);
+      }
+    }
+
+    const registeredPorts = new Set<number>();
+    const refreshedRegistry = this.registry.getState();
+    for (const proj of Object.values(refreshedRegistry.projects)) {
       if (proj.components) {
         for (const port of Object.values(proj.components)) {
           registeredPorts.add(port);

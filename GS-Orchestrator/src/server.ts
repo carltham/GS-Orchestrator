@@ -61,7 +61,7 @@ app.use('/api/auth', createAuthRoutes(userService));
 app.use('/api/admin', createAdminRoutes(userService));
 app.use(createHealthRoutes(registry, PORT));
 app.use(createRegistrationRoutes(registry, portAllocator, serverScanner, SELF_PROJECT_NAME));
-app.use(createRegistryRoutes(registry));
+app.use(createRegistryRoutes(registry, serverScanner));
 app.use(createScannerRoutes(serverScanner));
 app.use('/api/signals', signalRoutes);
 

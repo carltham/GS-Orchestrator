@@ -22,10 +22,10 @@ function main() {
   process.on('SIGTERM', cleanup);
 
   // GS-Orchestrator Server
-  const orchestratorPath = path.join(__dirname, 'GS-Orchestrator', 'src', 'server.ts');
+  const orchestratorPath = path.join(__dirname, 'GS-Orchestrator', 'dist', 'server.js');
   const configDir = path.join(__dirname, 'config');
   console.log('⏳ Starting GS-Orchestrator server on port 9000...');
-  const orchestratorProc = spawn('npx', ['--yes', 'ts-node', orchestratorPath], {
+  const orchestratorProc = spawn('node', [orchestratorPath], {
     cwd: path.dirname(orchestratorPath),
     stdio: 'inherit',
     shell: true,

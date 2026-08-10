@@ -108,7 +108,24 @@ export function createRegistrationRoutes(
 
       const existing = registry.getProject(projectName);
       if (existing) {
-        console.log(`✅ Project "${projectName}" already registered, returning existing components`);
+        existing.status = 'running';
+        existing.registeredAt = new Date().toISOString();
+
+        if (projectName === selfProjectName) {
+          existing.components['backend::node-ts'] = 9000;
+          for (const key of Object.keys(existing.components)) {
+            if (key.startsWith('frontend::')) {
+              existing.components[key] = 9001;
+            }
+          }
+          if (!existing.components['frontend::angular']) {
+            existing.components['frontend::angular'] = 9001;
+          }
+        }
+
+        registry.updateProject(projectName, existing);
+
+        console.log(`✅ Project "${projectName}" already registered, updated status to running`);
 
         const ports: Record<string, number> = {};
         for (const [compKey, allocatedPort] of Object.entries(existing.components)) {
@@ -143,7 +160,12 @@ export function createRegistrationRoutes(
         ports['backend'] = 9000;
         components['backend::node-ts'] = 9000;
         for (const [serviceKey, serverType] of Object.entries(serviceTypes)) {
-          if (serviceKey !== 'backend') {
+          if (serviceKey === 'backend') {
+            continue;
+          } else if (serviceKey === 'frontend') {
+            ports['frontend'] = 9001;
+            components[`frontend::${serverType}`] = 9001;
+          } else {
             const customBase = basePorts[serviceKey];
             const allocatedPort = portAllocator.allocatePort(
               projectName,

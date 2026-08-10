@@ -1,11 +1,18 @@
 import { Request, Response, Router } from 'express';
 import { RegistryService } from '../services/RegistryService';
+import { ServerScannerService } from '../services/ServerScannerService';
 
-export function createRegistryRoutes(registry: RegistryService): Router {
+export function createRegistryRoutes(
+  registry: RegistryService,
+  serverScanner?: ServerScannerService
+): Router {
   const router = Router();
 
   // GET /api/registry
-  router.get('/api/registry', (req: Request, res: Response) => {
+  router.get('/api/registry', async (req: Request, res: Response) => {
+    if (serverScanner) {
+      await serverScanner.scanRunningServers().catch(() => {});
+    }
     const data = registry.getState();
     res.status(200).json(data);
   });

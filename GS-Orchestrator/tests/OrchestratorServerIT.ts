@@ -74,17 +74,19 @@ describe('GS-Orchestrator Server Integration Tests (IT)', () => {
       expect(saved?.components['database::postgres']).toBe(5433);
     });
 
-    test('self-registers GS-Orchestrator assigning port 9000', async () => {
+    test('self-registers GS-Orchestrator assigning fixed ports 9000 for backend and 9001 for frontend', async () => {
       const payload = {
         projectName: SELF_PROJECT_NAME,
         path: '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator',
-        serviceTypes: { backend: 'node-ts' },
+        serviceTypes: { backend: 'node-ts', frontend: 'angular' },
       };
 
       const res = await request(app).post('/api/register').send(payload);
       expect(res.status).toBe(201);
       expect(res.body.ports.backend).toBe(9000);
+      expect(res.body.ports.frontend).toBe(9001);
       expect(res.body.components['backend::node-ts']).toBe(9000);
+      expect(res.body.components['frontend::angular']).toBe(9001);
     });
 
     test('idempotency: returning existing registration for already registered project', async () => {
