@@ -1,6 +1,6 @@
 {
-  "backend": 9000,
-  "frontend": 9001,
-  "timestamp": "2026-08-10T07:53:18.295Z",
+  "backend": 10000,
+  "frontend": 10000,
+  "timestamp": "2026-08-11T00:00:00.000Z",
   "project": "GS-Orchestrator"
 }

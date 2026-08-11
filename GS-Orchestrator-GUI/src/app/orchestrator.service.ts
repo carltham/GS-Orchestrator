@@ -37,7 +37,7 @@ export interface RegistryData {
   providedIn: 'root'
 })
 export class OrchestratorService {
-  private baseUrl = 'http://localhost:9000';
+  private baseUrl = window.location.origin;
 
   constructor(
     private http: HttpClient,

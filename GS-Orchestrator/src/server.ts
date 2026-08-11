@@ -128,12 +128,16 @@ if (require.main === module) {
 
     serverScanner.startPeriodicScan(30000);
 
-    // Initialize and start ProcessClient to connect to ProcessServer (:9999)
+    // Initialize and start ProcessClient to connect to ProcessServer (:9999) without spawning self
     try {
       const processClient = new ProcessClient({
         projectName: SELF_PROJECT_NAME || 'GS-Orchestrator'
       });
-      await processClient.start();
+      // Register with ProcessServer for heartbeats and signals without triggering secondary spawn
+      await (processClient as any).sendHeartbeat();
+      processClient.start = async function() {
+        console.log(`[ProcessClient] Registered in ${SELF_PROJECT_NAME || 'GS-Orchestrator'} server instance`);
+      };
       console.log('✅ Connected to ProcessServer (:9999) via ProcessClient');
     } catch (processClientErr: any) {
       console.warn(`⚠️ Could not connect ProcessClient to ProcessServer (:9999): ${processClientErr.message}`);

@@ -8,7 +8,6 @@ export interface InspectionPayload {
 
 export function generateProcessAdapter(payload: InspectionPayload): string {
   const projectName = payload.projectName || 'unknown-project';
-  const startScript = payload.startScript || 'npm start';
 
   return `/**
  * ProcessAdapter.js
@@ -17,77 +16,141 @@ export function generateProcessAdapter(payload: InspectionPayload): string {
  */
 
 const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
 class ProcessAdapter {
   constructor() {
     this.projectName = ${JSON.stringify(projectName)};
-    this.childProcess = null;
+    this.processes = {};
     this.status = 'STOPPED';
+    this.logDir = path.resolve(process.cwd(), 'logs');
+    this.logFilePath = path.join(this.logDir, 'process-adapter.log');
+    this.ensureLogDirectory();
+  }
+
+  ensureLogDirectory() {
+    try {
+      if (!fs.existsSync(this.logDir)) {
+        fs.mkdirSync(this.logDir, { recursive: true });
+      }
+    } catch (err) {
+      console.error(\`[ProcessAdapter] Failed to create log directory: \${err.message}\`);
+    }
+  }
+
+  log(message, level = 'INFO') {
+    const timestamp = new Date().toISOString();
+    const formatted = \`[\${timestamp}] [\${level}] [ProcessAdapter:\${this.projectName}] \${message}\\n\`;
+    console.log(\`[ProcessAdapter] \${message}\`);
+    try {
+      this.ensureLogDirectory();
+      fs.appendFileSync(this.logFilePath, formatted, 'utf8');
+    } catch (err) {
+      console.error(\`[ProcessAdapter] Log write failed: \${err.message}\`);
+    }
   }
 
   /**
-   * Start the target project process
+   * Main entry point to start all project components
    * @param {Object} ports Allocated ports for the target service
    */
   async start(ports = {}) {
     if (this.status === 'RUNNING') {
-      console.log(\`[ProcessAdapter] \${this.projectName} is already running.\`);
+      this.log(\`\${this.projectName} is already running.\`, 'WARN');
       return;
     }
 
-    console.log(\`[ProcessAdapter] Starting \${this.projectName}...\`);
+    this.log(\`Starting component services for \${this.projectName}...\`);
     const env = { ...process.env, ...ports };
 
-    // Execute configured start command
-    const commandParts = ${JSON.stringify(startScript)}.split(' ');
-    const cmd = commandParts[0];
-    const args = commandParts.slice(1);
+    if (fs.existsSync(path.join(__dirname, 'GS-Orchestrator', 'package.json'))) {
+      await this.startOrchestratorServer(env);
+    } else {
+      await this.startNodeComponent(env);
+    }
 
-    this.childProcess = spawn(cmd, args, {
+    this.status = 'RUNNING';
+  }
+
+  /**
+   * Component Launcher: GS-Orchestrator Backend Server
+   */
+  async startOrchestratorServer(env = {}) {
+    this.log('Launching component: GS-Orchestrator Server...');
+    const proc = spawn('npm', ['--prefix', 'GS-Orchestrator', 'run', 'dev'], {
       cwd: __dirname,
       env,
       stdio: 'inherit',
       shell: true
     });
 
-    this.status = 'RUNNING';
+    this.processes['server'] = proc;
+    this.bindProcessEvents('server', proc);
+  }
 
-    this.childProcess.on('exit', (code, signal) => {
-      console.log(\`[ProcessAdapter] \${this.projectName} exited with code \${code}, signal \${signal}\`);
-      this.status = 'STOPPED';
-      this.childProcess = null;
+  /**
+   * Component Launcher: Standard Node.js Application
+   */
+  async startNodeComponent(env = {}) {
+    this.log(\`Launching component: \${this.projectName}...\`);
+    const proc = spawn('npm', ['run', 'dev'], {
+      cwd: __dirname,
+      env,
+      stdio: 'inherit',
+      shell: true
     });
 
-    this.childProcess.on('error', (err) => {
-      console.error(\`[ProcessAdapter] Process error: \${err.message}\`);
+    this.processes[this.projectName] = proc;
+    this.bindProcessEvents(this.projectName, proc);
+  }
+
+  /**
+   * Bind lifecycle listeners to spawned child processes
+   */
+  bindProcessEvents(name, proc) {
+    proc.on('exit', (code, signal) => {
+      this.log(\`Component '\${name}' exited with code \${code}, signal \${signal}\`);
+      delete this.processes[name];
+      if (Object.keys(this.processes).length === 0) {
+        this.status = 'STOPPED';
+      }
+    });
+
+    proc.on('error', (err) => {
+      this.log(\`Component '\${name}' process error: \${err.message}\`, 'ERROR');
       this.status = 'ERROR';
     });
   }
 
   /**
-   * Stop the target project process
+   * Stop all component services
    */
   async stop() {
-    if (!this.childProcess || this.status !== 'RUNNING') {
-      console.log(\`[ProcessAdapter] \${this.projectName} is not running.\`);
-      this.status = 'STOPPED';
-      return;
+    this.log(\`Stopping all components for \${this.projectName}...\`);
+    for (const [name, proc] of Object.entries(this.processes)) {
+      if (proc) {
+        this.log(\`Killing component process: \${name}\`);
+        proc.kill('SIGTERM');
+      }
     }
-
-    console.log(\`[ProcessAdapter] Stopping \${this.projectName}...\`);
-    this.childProcess.kill('SIGTERM');
+    this.processes = {};
     this.status = 'STOPPED';
-    this.childProcess = null;
   }
 
   /**
-   * Get current process status and PID
+   * Get overall process status and PIDs
    */
   async getStatus() {
+    const pids = {};
+    for (const [name, proc] of Object.entries(this.processes)) {
+      pids[name] = proc ? proc.pid : null;
+    }
+
     return {
       projectName: this.projectName,
       status: this.status,
-      pid: this.childProcess ? this.childProcess.pid : null
+      components: pids
     };
   }
 }

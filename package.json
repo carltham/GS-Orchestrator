@@ -8,9 +8,9 @@
   },
   "scripts": {
     "dev": "npm --prefix GS-Orchestrator run dev",
-    "build": "npm --prefix GS-Orchestrator run build && npm --prefix lib/orchestrator-client run build",
-    "start": "node node_modules/@gs/orchestrator-client/dist/index.js",
-    "test": "npm --prefix GS-Orchestrator test && npm --prefix lib/orchestrator-client test",
+    "build": "npm --prefix GS-Orchestrator run build && npm --prefix lib/process-client run build",
+    "start": "node node_modules/@gs/process-client/dist/index.js",
+    "test": "npm --prefix GS-Orchestrator test",
     "startupHandler": "node startupHandler.js"
   },
   "repository": {
@@ -26,6 +26,6 @@
   },
   "homepage": "https://github.com/carltham/GS-Orchestrator#readme",
   "dependencies": {
-    "@gs/orchestrator-client": "file:lib/orchestrator-client"
+    "@gs/process-client": "file:lib/process-client"
   }
 }

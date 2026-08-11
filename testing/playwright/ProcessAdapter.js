@@ -1,7 +1,7 @@
 /**
  * ProcessAdapter.js
- * Generated dynamically by ProcessServer on 2026-08-11T07:38:09.018Z
- * Target Project: gs-orchestrator
+ * Generated dynamically by ProcessServer on 2026-08-11T07:38:08.721Z
+ * Target Project: orchestrator-playwright-tests
  */
 
 const { spawn } = require('child_process');
@@ -10,7 +10,7 @@ const fs = require('fs');
 
 class ProcessAdapter {
   constructor() {
-    this.projectName = "gs-orchestrator";
+    this.projectName = "orchestrator-playwright-tests";
     this.processes = {};
     this.status = 'STOPPED';
   }
