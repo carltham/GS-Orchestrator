@@ -80,10 +80,10 @@ app.get('/api/process/heartbeats', (req: Request, res: Response) => {
 app.post('/api/orchestrator/shutdown', (req: Request, res: Response) => {
   const signal = processRegistry.queueSignal({
     targetProject: 'GS-Orchestrator',
-    action: 'SHUTDOWN'
+    action: 'STOP'
   });
 
-  console.log('[ProcessServer] Queued shutdown signal for GS-Orchestrator:', signal);
+  console.log('[ProcessServer] Queued stop signal for GS-Orchestrator:', signal);
   res.json({
     status: 'shutdown_queued',
     target: 'GS-Orchestrator',

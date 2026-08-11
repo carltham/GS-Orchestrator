@@ -8,7 +8,7 @@ export interface ProcessHeartbeat {
 export interface ControlSignal {
   id: string;
   targetProject: string;
-  action: 'START' | 'STOP' | 'SHUTDOWN';
+  action: 'START' | 'STOP';
   ports?: { [key: string]: number };
   created: string;
 }

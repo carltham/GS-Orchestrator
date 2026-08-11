@@ -83,7 +83,7 @@ test.describe('ProcessServer (:9999) - Playwright API Integration Suite', () => 
     expect(matched.pid).toBe(12345);
   });
 
-  test('POST /api/orchestrator/shutdown queues shutdown signal for GS-Orchestrator', async ({ request }) => {
+  test('POST /api/orchestrator/shutdown queues STOP signal for GS-Orchestrator', async ({ request }) => {
     const shutdownRes = await request.post(`${PROCESS_SERVER_URL}/api/orchestrator/shutdown`);
     expect(shutdownRes.status()).toBe(200);
 
@@ -98,7 +98,7 @@ test.describe('ProcessServer (:9999) - Playwright API Integration Suite', () => 
     const signalsBody = await signalsRes.json();
     expect(signalsBody.signals.length).toBeGreaterThan(0);
 
-    const shutdownSignal = signalsBody.signals.find((s: any) => s.action === 'SHUTDOWN');
-    expect(shutdownSignal).toBeDefined();
+    const stopSignal = signalsBody.signals.find((s: any) => s.action === 'STOP');
+    expect(stopSignal).toBeDefined();
   });
 });

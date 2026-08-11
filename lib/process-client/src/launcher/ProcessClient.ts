@@ -154,11 +154,6 @@ export class ProcessClient {
           } else if (signal.action === 'STOP') {
             this.log(`Executing STOP signal via adapter...`);
             await this.adapter.stop();
-          } else if (signal.action === 'SHUTDOWN') {
-            this.log(`Executing SHUTDOWN signal via adapter...`);
-            await this.adapter.stop();
-            this.log(`Exiting ProcessClient process.`);
-            process.exit(0);
           }
         }
         await this.sendHeartbeat();
