@@ -30,7 +30,7 @@ describe('GS-Orchestrator Server Integration Tests (IT)', () => {
       const res = await request(app).get('/health');
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('healthy');
-      expect(res.body.port).toBe(9000);
+      expect(res.body.port).toBe(10000);
     });
 
     test('GET /api/health returns status 200 with status ok', async () => {
@@ -48,6 +48,10 @@ describe('GS-Orchestrator Server Integration Tests (IT)', () => {
     });
 
     test('registers a standard full-stack project and allocates dynamic ports', async () => {
+      // Mock scanner loadData to avoid system database port conflicts during test execution
+      const origLoadData = serverScanner.loadData.bind(serverScanner);
+      serverScanner.loadData = () => ({ lastScanned: new Date().toISOString(), servers: [] });
+
       const payload = {
         projectName: 'TestApp',
         path: '/tmp/testapp',
@@ -59,6 +63,8 @@ describe('GS-Orchestrator Server Integration Tests (IT)', () => {
       };
 
       const res = await request(app).post('/api/register').send(payload);
+      serverScanner.loadData = origLoadData; // Restore scanner method
+
       expect(res.status).toBe(201);
       expect(res.body.ports).toBeDefined();
       expect(res.body.ports.backend).toBe(3000);
@@ -74,7 +80,7 @@ describe('GS-Orchestrator Server Integration Tests (IT)', () => {
       expect(saved?.components['database::postgres']).toBe(5433);
     });
 
-    test('self-registers GS-Orchestrator assigning fixed ports 9000 for backend and 9001 for frontend', async () => {
+    test('self-registers GS-Orchestrator assigning fixed ports 10000 for backend and frontend', async () => {
       const payload = {
         projectName: SELF_PROJECT_NAME,
         path: '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator',
@@ -83,10 +89,10 @@ describe('GS-Orchestrator Server Integration Tests (IT)', () => {
 
       const res = await request(app).post('/api/register').send(payload);
       expect(res.status).toBe(201);
-      expect(res.body.ports.backend).toBe(9000);
-      expect(res.body.ports.frontend).toBe(9001);
-      expect(res.body.components['backend::node-ts']).toBe(9000);
-      expect(res.body.components['frontend::angular']).toBe(9001);
+      expect(res.body.ports.backend).toBe(10000);
+      expect(res.body.ports.frontend).toBe(10000);
+      expect(res.body.components['backend::node-ts']).toBe(10000);
+      expect(res.body.components['frontend::angular']).toBe(10000);
     });
 
     test('idempotency: returning existing registration for already registered project', async () => {

@@ -208,7 +208,7 @@ export class ServerScannerService {
       [5173, 5180],
       [5432, 5435],
       [8080, 8090],
-      [9000, 9010],
+      [10000, 10010],
       [9323, 9323],
     ];
 
@@ -260,8 +260,8 @@ export class ServerScannerService {
 
     for (const [startPort, endPort] of portRanges) {
       for (let p = startPort; p <= endPort; p++) {
-        // Skip orchestrator port 9000 and registered ports
-        if (p === 9000 || registeredPorts.has(p)) {
+        // Skip orchestrator port 10000 and registered ports
+        if (p === 10000 || registeredPorts.has(p)) {
           continue;
         }
 

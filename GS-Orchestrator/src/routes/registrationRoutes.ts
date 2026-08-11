@@ -113,14 +113,14 @@ export function createRegistrationRoutes(
         existing.registeredAt = new Date().toISOString();
 
         if (projectName === selfProjectName) {
-          existing.components['backend::node-ts'] = 9000;
+          existing.components['backend::node-ts'] = 10000;
           for (const key of Object.keys(existing.components)) {
             if (key.startsWith('frontend::')) {
-              existing.components[key] = 9001;
+              existing.components[key] = 10000;
             }
           }
           if (!existing.components['frontend::angular']) {
-            existing.components['frontend::angular'] = 9001;
+            existing.components['frontend::angular'] = 10000;
           }
         }
 
@@ -158,14 +158,14 @@ export function createRegistrationRoutes(
       const components: Record<string, number> = {};
 
       if (projectName === selfProjectName) {
-        ports['backend'] = 9000;
-        components['backend::node-ts'] = 9000;
+        ports['backend'] = 10000;
+        components['backend::node-ts'] = 10000;
         for (const [serviceKey, serverType] of Object.entries(serviceTypes)) {
           if (serviceKey === 'backend') {
             continue;
           } else if (serviceKey === 'frontend') {
-            ports['frontend'] = 9001;
-            components[`frontend::${serverType}`] = 9001;
+            ports['frontend'] = 10000;
+            components[`frontend::${serverType}`] = 10000;
           } else {
             const customBase = basePorts[serviceKey];
             const allocatedPort = portAllocator.allocatePort(
