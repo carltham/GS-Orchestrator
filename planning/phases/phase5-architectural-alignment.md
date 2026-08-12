@@ -33,3 +33,11 @@ This phase is complete when the following benchmarks are satisfied:
 2. **Zero OS-level binaries executed in Orchestrator:** The Orchestrator manages registrations and server views entirely via network calls to the host Process Server machine daemon.
 3. **Unified Codebase:** Both services communicate over a single standard signaling event bus.
 4. **Passing Test Suites:** Standard unified SFT, SIT, and UIT suites pass consistently.
+
+---
+
+## 4. Test Corrections and Future Verification Tasks
+* **Restoring Fresh Registration Status Assertion (Task 5):**
+  * Once teardown mechanisms or database-reset logic is in place before SIT executions, the `expect(registerRes.status).toBe(201)` expectation in [testing/sys/sit/orchestrator-api-lifecycle.sit.test.ts](testing/sys/sit/orchestrator-api-lifecycle.sit.test.ts) must be reverted to strictly verify fresh registration, instead of tolerating idempotent `200` status.
+* **Refactoring the Orchestrator Signaling Bridge Fallback (Task 3):**
+  * The transition bridge in `registrationRoutes.ts` (which currently catches connection errors to `http://localhost:9999/api/process/signals` and falls back to local `signalService.queueSignal("stop", projectName)`) must be cleaned up once `signals.json` is entirely retired. The Orchestrator should directly/strictly rely on Process Server signaling without local file system fallbacks.

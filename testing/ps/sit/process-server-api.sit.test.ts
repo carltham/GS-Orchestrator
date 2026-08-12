@@ -1,15 +1,21 @@
 describe('Process Server (:9999) - API Controls SIT', () => {
   const PROCESS_SERVER_URL = 'http://localhost:9999';
 
-  test('POST /api/orchestrator/shutdown queues STOP signal for GS-Orchestrator', async () => {
-    const shutdownRes = await fetch(`${PROCESS_SERVER_URL}/api/orchestrator/shutdown`, {
-      method: 'POST'
+  test('POST /api/process/signals queues generic STOP signal for GS-Orchestrator', async () => {
+    const shutdownRes = await fetch(`${PROCESS_SERVER_URL}/api/process/signals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetProject: 'GS-Orchestrator',
+        action: 'STOP'
+      })
     });
-    expect(shutdownRes.status).toBe(200);
+    expect(shutdownRes.status).toBe(201);
 
     const body = await shutdownRes.json() as any;
-    expect(body.status).toBe('shutdown_queued');
-    expect(body.target).toBe('GS-Orchestrator');
+    expect(body.status).toBe('queued');
+    expect(body.signal.targetProject).toBe('GS-Orchestrator');
+    expect(body.signal.action).toBe('STOP');
 
     // Poll signal queue for GS-Orchestrator
     const signalsRes = await fetch(`${PROCESS_SERVER_URL}/api/process/signals?projectName=GS-Orchestrator`);

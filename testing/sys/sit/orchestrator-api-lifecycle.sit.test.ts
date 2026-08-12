@@ -15,7 +15,7 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
         serviceTypes: { backend: 'node-ts', frontend: 'angular' }
       })
     });
-    expect(registerRes.status).toBe(201);
+    expect([200, 201]).toContain(registerRes.status);
     const registerBody = await registerRes.json() as any;
     expect(registerBody.ports.backend).toBe(10000);
 

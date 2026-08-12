@@ -10,11 +10,12 @@ Ensure the Process Server remains a generic, host-level background resource mana
 ---
 
 ## Action Items
-- [ ] Remove `app.post('/api/orchestrator/shutdown')` route from [lib/process-server/src/server.ts](lib/process-server/src/server.ts).
-- [ ] Edit [testing/ps/sit/process-server-api.sit.test.ts](testing/ps/sit/process-server-api.sit.test.ts):
+- [x] Remove `app.post('/api/orchestrator/shutdown')` route from [lib/process-server/src/server.ts](lib/process-server/src/server.ts).
+- [x] Edit [testing/ps/sit/process-server-api.sit.test.ts](testing/ps/sit/process-server-api.sit.test.ts):
   - Replace the custom orchestrator shutdown endpoint logic.
   - Modify the test to POST a standardized `"STOP"` action for target `"GS-Orchestrator"` to the generic `/api/process/signals` messaging endpoint.
-- [ ] Verify test suite passes sequentially with no regressions:
+- [x] Verify test suite passes sequentially with no regressions:
   ```bash
   npm run test:sit
   ```
+- [x] Integrate temporary transition signaling route fallback in `DELETE /api/register/:projectName` within the Orchestrator backend (and log a todo item to fully remove this bridge in Task 3 once `signals.json` is deleted).

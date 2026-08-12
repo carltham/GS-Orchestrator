@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { generateProcessAdapter, InspectionPayload } from './generators/adapterGenerator';
 import { processRegistry, ProcessHeartbeat } from './services/ProcessRegistryService';
+import { pureServerScanner } from './services/ServerScannerService';
 
 const PORT = process.env.PROCESS_SERVER_PORT ? parseInt(process.env.PROCESS_SERVER_PORT, 10) : 9999;
 
@@ -60,6 +61,22 @@ app.get('/api/process/signals', (req: Request, res: Response) => {
   res.json({ projectName, signals });
 });
 
+// POST /api/process/signals - Queues a generic control signal targeting a project
+app.post('/api/process/signals', (req: Request, res: Response) => {
+  const { targetProject, action, ports } = req.body || {};
+  if (!targetProject || !action) {
+    return res.status(400).json({ error: 'targetProject and action are required' });
+  }
+
+  const signal = processRegistry.queueSignal({
+    targetProject,
+    action,
+    ports
+  });
+
+  res.status(201).json({ status: 'queued', signal });
+});
+
 // POST /api/process/heartbeat - Receives health heartbeats from client processes
 app.post('/api/process/heartbeat', (req: Request, res: Response) => {
   const heartbeat: ProcessHeartbeat = req.body;
@@ -76,19 +93,41 @@ app.get('/api/process/heartbeats', (req: Request, res: Response) => {
   res.json({ processes: processRegistry.getHeartbeats() });
 });
 
-// POST /api/orchestrator/shutdown - Queues shutdown signal specifically targeting GS-Orchestrator
-app.post('/api/orchestrator/shutdown', (req: Request, res: Response) => {
-  const signal = processRegistry.queueSignal({
-    targetProject: 'GS-Orchestrator',
-    action: 'STOP'
-  });
+// GET /api/host/unregistered - Run machine scanning check for unmanaged listeners
+app.get('/api/host/unregistered', async (req: Request, res: Response) => {
+  try {
+    const registeredPortsQuery = (req.query.registeredPorts as string) || '';
+    const registeredPathsQuery = (req.query.registeredPaths as string) || '';
 
-  console.log('[ProcessServer] Queued stop signal for GS-Orchestrator:', signal);
-  res.json({
-    status: 'shutdown_queued',
-    target: 'GS-Orchestrator',
-    signal
-  });
+    const registeredPorts = registeredPortsQuery ? registeredPortsQuery.split(',').map(p => parseInt(p.trim(), 10)).filter(p => !isNaN(p)) : [];
+    const registeredPaths = registeredPathsQuery ? registeredPathsQuery.split(',') : [];
+
+    const servers = await pureServerScanner.scanRunningServers(registeredPorts, registeredPaths);
+    res.json({
+      lastScanned: new Date().toISOString(),
+      servers
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Scanner execution failed', details: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// POST /api/host/check-ports - Quick check if a list of ports are occupied
+app.post('/api/host/check-ports', async (req: Request, res: Response) => {
+  try {
+    const { ports } = req.body || {};
+    if (!Array.isArray(ports)) {
+      return res.status(400).json({ error: 'ports query array is required' });
+    }
+
+    const results: Record<number, boolean> = {};
+    for (const port of ports) {
+      results[port] = await pureServerScanner.isPortOccupied(port);
+    }
+    res.json({ ports: results });
+  } catch (err) {
+    res.status(500).json({ error: 'Port checking failed', details: err instanceof Error ? err.message : String(err) });
+  }
 });
 
 if (require.main === module) {

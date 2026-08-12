@@ -31,8 +31,16 @@ export function createRegistrationRoutes(
         registry.updateProject(projectName, project);
       }
 
-      // Queue a stop signal for the client
-      signalService.queueSignal('stop', projectName);
+      // Queue a stop signal for the client via Process Server
+      await fetch('http://localhost:9999/api/process/signals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetProject: projectName, action: 'STOP' })
+      }).catch(err => {
+        console.warn(`⚠️ Could not post STOP signal to Process Server: ${err.message}`);
+        // Fallback to legacy SignalService during transition state
+        signalService.queueSignal('stop', projectName);
+      });
 
       if (project) {
         console.log(`🛑 Project "${projectName}" status changed to stopping. Stop signal queued for client.`);
