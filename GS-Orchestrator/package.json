@@ -7,7 +7,8 @@
     "dev": "ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "jest --testMatch='**/tests/**/*IT.ts'",
+    "test": "jest --testPathIgnorePatterns='testing/GS-Orchestrator/SFT/'",
+    "test:sft": "jest --config jest.config.js --testMatch '**/OrchestratorServer-SFT.ts' --coverage --collectCoverageFrom='src/**/*.ts'",
     "startupHandler": "node startupHandler.js"
   },
   "dependencies": {
@@ -22,7 +23,7 @@
     "@types/jest": "^29.5.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.0.0",
-    "@types/supertest": "^2.0.12",
+    "@types/supertest": "^2.0.16",
     "jest": "^29.5.0",
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.0",

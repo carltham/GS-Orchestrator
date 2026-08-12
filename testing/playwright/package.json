@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:sit": "playwright test --project=sit",
+    "test:uit": "playwright test --project=uit"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

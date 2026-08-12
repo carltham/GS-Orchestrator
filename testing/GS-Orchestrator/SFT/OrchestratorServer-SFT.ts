@@ -2,10 +2,10 @@ import request from 'supertest';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
-import { app, registry, serverScanner, SELF_PROJECT_NAME } from '../src/server';
+import { app, registry, serverScanner, SELF_PROJECT_NAME } from '../../../GS-Orchestrator/src/server';
 
-describe('GS-Orchestrator Server Integration Tests (IT)', () => {
-  const distDir = path.join(__dirname, '..', 'dist');
+describe('GS-Orchestrator Server System Functional Tests (SFT)', () => {
+  const distDir = path.join(__dirname, '..', '..', '..', 'GS-Orchestrator', 'dist');
   const registryPath = path.join(distDir, 'registry.json');
   const unregisteredPath = path.join(distDir, 'unregistered-servers.json');
 

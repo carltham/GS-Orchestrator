@@ -1,9 +1,0 @@
-[2026-08-11T18:05:12.542Z] [INFO] [ProcessClient:gs-orchestrator] Initialized ProcessClient for gs-orchestrator targeting http://localhost:9999
-[2026-08-11T18:05:12.544Z] [INFO] [ProcessClient:gs-orchestrator] Started process client polling against http://localhost:9999
-[2026-08-11T18:05:12.544Z] [INFO] [ProcessClient:gs-orchestrator] Launching target process via ProcessAdapter...
-[2026-08-11T18:05:12.552Z] [INFO] [ProcessClient:gs-orchestrator] Target process launch initiated successfully.
-[2026-08-11T18:05:12.618Z] [INFO] [ProcessClient:gs-orchestrator] Heartbeat sent. Status: RUNNING
-[2026-08-11T18:05:27.630Z] [INFO] [ProcessClient:gs-orchestrator] Heartbeat sent. Status: RUNNING
-[2026-08-11T18:05:42.642Z] [INFO] [ProcessClient:gs-orchestrator] Heartbeat sent. Status: RUNNING
-[2026-08-11T18:05:57.649Z] [INFO] [ProcessClient:gs-orchestrator] Heartbeat sent. Status: RUNNING
-[2026-08-11T18:06:12.659Z] [INFO] [ProcessClient:gs-orchestrator] Heartbeat sent. Status: RUNNING

@@ -9,3 +9,7 @@ lib/orchestrator-client/dist/
 test-results/
 signals.json
 playwright-report/
+**/coverage/
+**/logs/
+testing/playwright/test-results/
+testing/playwright/playwright-report/

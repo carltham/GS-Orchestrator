@@ -20,7 +20,7 @@ test.describe('GS-Orchestrator Lifecycle - GUI Integration Suite', () => {
     }
     
     // Login as Thor
-    await page.locator('button:has-text("Login as Thor")').click();
+    await page.locator('button:has-text("Thor Superadmin Login")').click();
     await page.waitForTimeout(500);
 
     // Navigate to projects page

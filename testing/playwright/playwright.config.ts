@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
+  testMatch: '**/*.{sit,uit}.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -13,7 +13,12 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'sit',
+      testDir: './sit',
+    },
+    {
+      name: 'uit',
+      testDir: './uit',
       use: { ...devices['Desktop Chrome'] },
     },
   ],

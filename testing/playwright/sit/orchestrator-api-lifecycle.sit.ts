@@ -26,7 +26,7 @@ test.describe('GS-Orchestrator Lifecycle - API Integration Suite', () => {
     expect(stopBody.status).toBe('stopping');
 
     // 3. Peek process signal on ProcessServer (:9999) to confirm stop signal queued
-    const signalsRes = await request.get(`${PROCESS_SERVER_URL}/api/process/signals/pending?projectName=${PROJECT_NAME}`);
+    const signalsRes = await request.get(`${PROCESS_SERVER_URL}/api/process/signals?projectName=${PROJECT_NAME}`);
     expect(signalsRes.status()).toBe(200);
     const signalsBody = await signalsRes.json();
     const stopSignal = signalsBody.signals.find((s: any) => s.action === 'STOP');
