@@ -7,8 +7,9 @@
     "dev": "ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "jest --testPathIgnorePatterns='testing/GS-Orchestrator/SFT/'",
-    "test:sft": "jest --config jest.config.js --testMatch '**/OrchestratorServer-SFT.ts' --coverage --collectCoverageFrom='src/**/*.ts'",
+    "test": "jest --testPathIgnorePatterns='testing/'",
+    "test:sft": "jest --config jest.config.js --testMatch '**/OrchestratorServer-SFT.test.ts' --coverage --collectCoverageFrom='src/**/*.ts'",
+    "test:sit": "jest --config jest.config.js --testMatch '**/*.sit.test.ts' --runInBand",
     "startupHandler": "node startupHandler.js"
   },
   "dependencies": {

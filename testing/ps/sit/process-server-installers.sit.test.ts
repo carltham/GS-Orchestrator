@@ -1,13 +1,11 @@
-import { test, expect } from '@playwright/test';
-
-test.describe('ProcessServer (:9999) - Installers Suite', () => {
+describe('Process Server (:9999) - Installers SIT', () => {
   const PROCESS_SERVER_URL = 'http://localhost:9999';
 
-  test('GET /install.sh returns valid shell inspector script', async ({ request }) => {
-    const response = await request.get(`${PROCESS_SERVER_URL}/install.sh`);
-    expect(response.status()).toBe(200);
+  test('GET /install.sh returns valid shell inspector script', async () => {
+    const response = await fetch(`${PROCESS_SERVER_URL}/install.sh`);
+    expect(response.status).toBe(200);
 
-    const contentType = response.headers()['content-type'];
+    const contentType = response.headers.get('content-type');
     expect(contentType).toContain('text/x-shellscript');
 
     const text = await response.text();
@@ -15,16 +13,16 @@ test.describe('ProcessServer (:9999) - Installers Suite', () => {
     expect(text).toContain('ProcessAdapter.js');
   });
 
-  test('GET /install.js returns valid Node.js inspector script', async ({ request }) => {
-    const response = await request.get(`${PROCESS_SERVER_URL}/install.js`);
-    expect(response.status()).toBe(200);
+  test('GET /install.js returns valid Node.js inspector script', async () => {
+    const response = await fetch(`${PROCESS_SERVER_URL}/install.js`);
+    expect(response.status).toBe(200);
 
     const text = await response.text();
     expect(text).toContain('ProcessInstaller');
     expect(text).toContain('ProcessAdapter.js');
   });
 
-  test('POST /api/installer/generate compiles runnable ProcessAdapter class', async ({ request }) => {
+  test('POST /api/installer/generate compiles runnable ProcessAdapter class', async () => {
     const payload = {
       workspaceDir: '/tmp/test-workspace',
       projectName: 'TestProject',
@@ -32,11 +30,13 @@ test.describe('ProcessServer (:9999) - Installers Suite', () => {
       startScript: 'npm start'
     };
 
-    const response = await request.post(`${PROCESS_SERVER_URL}/api/installer/generate`, {
-      data: payload
+    const response = await fetch(`${PROCESS_SERVER_URL}/api/installer/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status).toBe(200);
     const code = await response.text();
 
     expect(code).toContain('class ProcessAdapter');

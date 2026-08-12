@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "test": "playwright test",
-    "test:sit": "playwright test --project=sit",
     "test:uit": "playwright test --project=uit"
   },
   "devDependencies": {

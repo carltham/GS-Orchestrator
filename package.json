@@ -12,7 +12,7 @@
     "start": "node node_modules/@gs/process-client/dist/index.js",
     "test": "npm --prefix GS-Orchestrator test",
     "test:sft": "npm --prefix GS-Orchestrator run test:sft",
-    "test:sit": "npm --prefix testing/playwright run test:sit",
+    "test:sit": "npm --prefix GS-Orchestrator run test:sit",
     "test:uit": "npm --prefix testing/playwright run test:uit",
     "startupHandler": "node startupHandler.js"
   },
