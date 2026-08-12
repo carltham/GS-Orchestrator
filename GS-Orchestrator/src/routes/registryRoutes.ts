@@ -8,8 +8,8 @@ export function createRegistryRoutes(
 ): Router {
   const router = Router();
 
-  // GET /api/registry
-  router.get('/api/registry', async (req: Request, res: Response) => {
+  // GET /orch/project/registry
+  router.get('/orch/project/registry', async (req: Request, res: Response) => {
     if (serverScanner) {
       await serverScanner.scanRunningServers().catch(() => {});
     }
@@ -17,8 +17,8 @@ export function createRegistryRoutes(
     res.status(200).json(data);
   });
 
-  // GET /api/count
-  router.get('/api/count', (req: Request, res: Response) => {
+  // GET /orch/project/count
+  router.get('/orch/project/count', (req: Request, res: Response) => {
     const count = registry.getProjectCount();
     res.status(200).json({ count });
   });

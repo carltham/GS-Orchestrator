@@ -22,7 +22,7 @@ describe('Process Server (:9999) - Installers SIT', () => {
     expect(text).toContain('ProcessAdapter.js');
   });
 
-  test('POST /api/installer/generate compiles runnable ProcessAdapter class', async () => {
+  test('POST /ps/installer/generate compiles runnable ProcessAdapter class', async () => {
     const payload = {
       workspaceDir: '/tmp/test-workspace',
       projectName: 'TestProject',
@@ -30,7 +30,7 @@ describe('Process Server (:9999) - Installers SIT', () => {
       startScript: 'npm start'
     };
 
-    const response = await fetch(`${PROCESS_SERVER_URL}/api/installer/generate`, {
+    const response = await fetch(`${PROCESS_SERVER_URL}/ps/installer/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

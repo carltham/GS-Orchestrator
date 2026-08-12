@@ -1,7 +1,7 @@
 describe('Process Server (:9999) - Telemetry SIT', () => {
   const PROCESS_SERVER_URL = 'http://localhost:9999';
 
-  test('POST /api/process/heartbeat & GET /api/process/heartbeats tracks active telemetry', async () => {
+  test('POST /ps/process/heartbeat & GET /ps/process/heartbeats tracks active telemetry', async () => {
     const heartbeat = {
       projectName: 'TestService',
       status: 'RUNNING',
@@ -9,7 +9,7 @@ describe('Process Server (:9999) - Telemetry SIT', () => {
     };
 
     // Send Heartbeat
-    const postRes = await fetch(`${PROCESS_SERVER_URL}/api/process/heartbeat`, {
+    const postRes = await fetch(`${PROCESS_SERVER_URL}/ps/process/heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(heartbeat)
@@ -17,7 +17,7 @@ describe('Process Server (:9999) - Telemetry SIT', () => {
     expect(postRes.status).toBe(200);
 
     // Get Active Heartbeats
-    const getRes = await fetch(`${PROCESS_SERVER_URL}/api/process/heartbeats`);
+    const getRes = await fetch(`${PROCESS_SERVER_URL}/ps/process/heartbeats`);
     expect(getRes.status).toBe(200);
 
     const body = await getRes.json() as any;

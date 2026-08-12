@@ -1,0 +1,10 @@
+{
+  "name": "simulated-frontend-template",
+  "version": "1.0.0",
+  "description": "Zero-dependency simulated frontend template for orchestration tests",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  }
+}

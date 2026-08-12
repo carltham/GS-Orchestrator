@@ -178,7 +178,7 @@ export class ProcessClient {
         timestamp: new Date().toISOString()
       };
 
-      const res = await fetch(`${this.processServerUrl}/api/process/heartbeat`, {
+      const res = await fetch(`${this.processServerUrl}/ps/process/heartbeat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -196,7 +196,7 @@ export class ProcessClient {
 
   private async pollSignals(): Promise<void> {
     try {
-      const res = await fetch(`${this.processServerUrl}/api/process/signals?projectName=${encodeURIComponent(this.projectName)}`);
+      const res = await fetch(`${this.processServerUrl}/ps/process/signals?projectName=${encodeURIComponent(this.projectName)}`);
       if (!res.ok) return;
 
       const data = await res.json() as { signals?: Array<{ id: string; action: string; ports?: { [key: string]: number } }> };

@@ -5,9 +5,9 @@ import * as path from 'path';
 import { app, serverScanner } from '../../../GS-Orchestrator/src/server';
 
 describe('GS-Orchestrator Server SFT - Unregistered Server Scanner', () => {
-  const distDir = path.join(__dirname, '..', '..', '..', 'GS-Orchestrator', 'dist');
-  const registryPath = path.join(distDir, 'registry.json');
-  const unregisteredPath = path.join(distDir, 'unregistered-servers.json');
+  const dbDir = path.join(__dirname, '..', '..', '..', 'db');
+  const registryPath = path.join(dbDir, 'registry.json');
+  const unregisteredPath = path.join(dbDir, 'unregistered-servers.json');
 
   beforeEach(() => {
     if (fs.existsSync(registryPath)) {
@@ -44,7 +44,7 @@ describe('GS-Orchestrator Server SFT - Unregistered Server Scanner', () => {
     const discovered = await serverScanner.scanRunningServers();
     expect(discovered.some((s) => s.port === testPort)).toBe(true);
 
-    const res = await request(app).get('/api/unregistered');
+    const res = await request(app).get('/orch/project/unregistered');
     expect(res.status).toBe(200);
     expect(res.body.servers).toBeDefined();
 

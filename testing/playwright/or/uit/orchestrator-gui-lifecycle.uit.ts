@@ -8,7 +8,7 @@ test.describe('GS-Orchestrator Lifecycle - GUI Integration Suite', () => {
   test.beforeEach(async ({ page }) => {
     // Ensure 'SIT-Fresh-Verification-App' is registered and marked as running in the database
     try {
-      await fetch(`${ORCHESTRATOR_URL}/api/register`, {
+      await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -48,6 +48,13 @@ test.describe('GS-Orchestrator Lifecycle - GUI Integration Suite', () => {
     await expect(targetRow).toBeVisible();
 
     const statusBadge = targetRow.locator('.badge-clickable');
+    
+    // Log verbose details of the target row for debugging purposes
+    const rowText = await targetRow.innerText();
+    const statusTextDetail = await statusBadge.innerText();
+    console.log(`[VERBOSE PLAYWRIGHT DEBUG] Found row details: "${rowText.trim()}"`);
+    console.log(`[VERBOSE PLAYWRIGHT DEBUG] Status badge text: "${statusTextDetail.trim()}"`);
+
     await expect(statusBadge).toContainText('running');
     await statusBadge.click();
 

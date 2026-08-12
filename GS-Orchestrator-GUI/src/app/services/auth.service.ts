@@ -40,7 +40,7 @@ export class AuthService {
   }
 
   login(username: string, password?: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>('/api/auth/login', {
+    return this.http.post<LoginResponse>('/orch/auth/login', {
       username,
       password
     }).pipe(
@@ -65,7 +65,7 @@ export class AuthService {
       return;
     }
 
-    this.http.get<AuthCheckResponse>('/api/auth/check', {
+    this.http.get<AuthCheckResponse>('/orch/auth/check', {
       headers: this.getAuthHeaders()
     }).subscribe({
       next: (response) => {

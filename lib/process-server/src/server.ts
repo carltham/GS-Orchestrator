@@ -45,8 +45,8 @@ app.get('/install.js', (req: Request, res: Response) => {
   }
 });
 
-// POST /api/installer/generate - Compiles and returns tailored ProcessAdapter.js
-app.post('/api/installer/generate', (req: Request, res: Response) => {
+// POST /ps/installer/generate - Compiles and returns tailored ProcessAdapter.js
+app.post('/ps/installer/generate', (req: Request, res: Response) => {
   const payload: InspectionPayload = req.body || {};
   const adapterCode = generateProcessAdapter(payload);
 
@@ -54,8 +54,8 @@ app.post('/api/installer/generate', (req: Request, res: Response) => {
   res.status(200).send(adapterCode);
 });
 
-// GET /api/process/signals - Renders and consumes pending control signals for a project
-app.get('/api/process/signals', (req: Request, res: Response) => {
+// GET /ps/process/signals - Renders and consumes pending control signals for a project
+app.get('/ps/process/signals', (req: Request, res: Response) => {
   const projectName = (req.query.projectName as string) || '*';
   const consume = req.query.consume !== 'false';
   
@@ -66,8 +66,8 @@ app.get('/api/process/signals', (req: Request, res: Response) => {
   res.json({ projectName, consume, signals });
 });
 
-// POST /api/process/signals - Queues a generic control signal targeting a project
-app.post('/api/process/signals', (req: Request, res: Response) => {
+// POST /ps/process/signals - Queues a generic control signal targeting a project
+app.post('/ps/process/signals', (req: Request, res: Response) => {
   const { targetProject, action, ports } = req.body || {};
   if (!targetProject || !action) {
     return res.status(400).json({ error: 'targetProject and action are required' });
@@ -82,8 +82,8 @@ app.post('/api/process/signals', (req: Request, res: Response) => {
   res.status(201).json({ status: 'queued', signal });
 });
 
-// POST /api/process/heartbeat - Receives health heartbeats from client processes
-app.post('/api/process/heartbeat', (req: Request, res: Response) => {
+// POST /ps/process/heartbeat - Receives health heartbeats from client processes
+app.post('/ps/process/heartbeat', (req: Request, res: Response) => {
   const heartbeat: ProcessHeartbeat = req.body;
   if (!heartbeat || !heartbeat.projectName) {
     return res.status(400).json({ error: 'projectName is required in heartbeat payload' });
@@ -93,13 +93,13 @@ app.post('/api/process/heartbeat', (req: Request, res: Response) => {
   res.json({ status: 'acknowledged', timestamp: new Date().toISOString() });
 });
 
-// GET /api/process/heartbeats - Listing active processes
-app.get('/api/process/heartbeats', (req: Request, res: Response) => {
+// GET /ps/process/heartbeats - Listing active processes
+app.get('/ps/process/heartbeats', (req: Request, res: Response) => {
   res.json({ processes: processRegistry.getHeartbeats() });
 });
 
-// GET /api/host/unregistered - Run machine scanning check for unmanaged listeners
-app.get('/api/host/unregistered', async (req: Request, res: Response) => {
+// GET /ps/host/unregistered - Run machine scanning check for unmanaged listeners
+app.get('/ps/host/unregistered', async (req: Request, res: Response) => {
   try {
     const registeredPortsQuery = (req.query.registeredPorts as string) || '';
     const registeredPathsQuery = (req.query.registeredPaths as string) || '';
@@ -117,8 +117,8 @@ app.get('/api/host/unregistered', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/host/check-ports - Quick check if a list of ports are occupied
-app.post('/api/host/check-ports', async (req: Request, res: Response) => {
+// POST /ps/host/check-ports - Quick check if a list of ports are occupied
+app.post('/ps/host/check-ports', async (req: Request, res: Response) => {
   try {
     const { ports } = req.body || {};
     if (!Array.isArray(ports)) {

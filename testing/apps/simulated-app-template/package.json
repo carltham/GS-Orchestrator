@@ -1,0 +1,13 @@
+{
+  "name": "simulated-app-placeholder-name",
+  "version": "1.0.0",
+  "description": "A dynamic physical template for testing process manager lifecycles",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

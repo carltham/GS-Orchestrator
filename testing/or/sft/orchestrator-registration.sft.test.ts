@@ -4,9 +4,9 @@ import * as path from 'path';
 import { app, registry, serverScanner, SELF_PROJECT_NAME } from '../../../GS-Orchestrator/src/server';
 
 describe('GS-Orchestrator Server SFT - Project Registration & Port Allocation', () => {
-  const distDir = path.join(__dirname, '..', '..', '..', 'GS-Orchestrator', 'dist');
-  const registryPath = path.join(distDir, 'registry.json');
-  const unregisteredPath = path.join(distDir, 'unregistered-servers.json');
+  const dbDir = path.join(__dirname, '..', '..', '..', 'db');
+  const registryPath = path.join(dbDir, 'registry.json');
+  const unregisteredPath = path.join(dbDir, 'unregistered-servers.json');
 
   beforeEach(() => {
     if (fs.existsSync(registryPath)) {
@@ -24,7 +24,7 @@ describe('GS-Orchestrator Server SFT - Project Registration & Port Allocation', 
   });
 
   test('rejects registration with missing parameters', async () => {
-    const res = await request(app).post('/api/register').send({});
+    const res = await request(app).post('/orch/project/register').send({});
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Missing required fields');
   });
@@ -44,7 +44,7 @@ describe('GS-Orchestrator Server SFT - Project Registration & Port Allocation', 
       },
     };
 
-    const res = await request(app).post('/api/register').send(payload);
+    const res = await request(app).post('/orch/project/register').send(payload);
     serverScanner.loadData = origLoadData; // Restore scanner method
 
     expect(res.status).toBe(201);
@@ -69,7 +69,7 @@ describe('GS-Orchestrator Server SFT - Project Registration & Port Allocation', 
       serviceTypes: { backend: 'node-ts', frontend: 'angular' },
     };
 
-    const res = await request(app).post('/api/register').send(payload);
+    const res = await request(app).post('/orch/project/register').send(payload);
     expect(res.status).toBe(201);
     expect(res.body.ports.backend).toBe(10000);
     expect(res.body.ports.frontend).toBe(10000);
@@ -84,10 +84,10 @@ describe('GS-Orchestrator Server SFT - Project Registration & Port Allocation', 
       serviceTypes: { backend: 'node-ts' },
     };
 
-    const first = await request(app).post('/api/register').send(payload);
+    const first = await request(app).post('/orch/project/register').send(payload);
     expect(first.status).toBe(201);
 
-    const second = await request(app).post('/api/register').send(payload);
+    const second = await request(app).post('/orch/project/register').send(payload);
     expect(second.status).toBe(200);
     expect(second.body.ports.backend).toBe(first.body.ports.backend);
   });

@@ -4,9 +4,9 @@ import * as path from 'path';
 import { app, registry } from '../../../GS-Orchestrator/src/server';
 
 describe('GS-Orchestrator Server SFT - Health & Telemetry Reports', () => {
-  const distDir = path.join(__dirname, '..', '..', '..', 'GS-Orchestrator', 'dist');
-  const registryPath = path.join(distDir, 'registry.json');
-  const unregisteredPath = path.join(distDir, 'unregistered-servers.json');
+  const dbDir = path.join(__dirname, '..', '..', '..', 'db');
+  const registryPath = path.join(dbDir, 'registry.json');
+  const unregisteredPath = path.join(dbDir, 'unregistered-servers.json');
 
   beforeEach(() => {
     if (fs.existsSync(registryPath)) {
@@ -24,7 +24,7 @@ describe('GS-Orchestrator Server SFT - Health & Telemetry Reports', () => {
   });
 
   test('rejects health report for unregistered project with 404', async () => {
-    const res = await request(app).post('/api/health').send({
+    const res = await request(app).post('/orch/reporting/project/health').send({
       projectName: 'NonExistentProject',
       health: { status: 'ok' },
     });
@@ -32,13 +32,13 @@ describe('GS-Orchestrator Server SFT - Health & Telemetry Reports', () => {
   });
 
   test('accepts health report for registered project and updates status', async () => {
-    await request(app).post('/api/register').send({
+    await request(app).post('/orch/project/register').send({
       projectName: 'HealthyApp',
       path: '/tmp/healthy',
       serviceTypes: { backend: 'node-ts' },
     });
 
-    const res = await request(app).post('/api/health').send({
+    const res = await request(app).post('/orch/reporting/project/health').send({
       projectName: 'HealthyApp',
       health: {
         status: 'ok',

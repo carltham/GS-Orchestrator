@@ -68,7 +68,7 @@ export class ServerScannerService {
    */
   public async checkPortsOccupied(ports: number[]): Promise<Record<number, boolean>> {
     try {
-      const res = await fetch('http://localhost:9999/api/host/check-ports', {
+      const res = await fetch('http://localhost:9999/ps/host/check-ports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ports })
@@ -156,7 +156,7 @@ export class ServerScannerService {
     try {
       const portsParam = encodeURIComponent(registeredPortsArray.join(','));
       const pathsParam = encodeURIComponent(registeredProjectPaths.join(','));
-      const res = await fetch(`http://localhost:9999/api/host/unregistered?registeredPorts=${portsParam}&registeredPaths=${pathsParam}`);
+      const res = await fetch(`http://localhost:9999/ps/host/unregistered?registeredPorts=${portsParam}&registeredPaths=${pathsParam}`);
       if (res.ok) {
         const body = await res.json() as any;
         detectedServers = body.servers || [];

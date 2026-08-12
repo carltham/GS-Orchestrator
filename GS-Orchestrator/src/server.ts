@@ -22,10 +22,10 @@ const app: Express = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
 const SELF_PROJECT_NAME = detectOwnProjectName();
 
-// Persistence Paths
-const registryPath = path.join(__dirname, '..', 'dist', 'registry.json');
-const unregisteredPath = path.join(__dirname, '..', 'dist', 'unregistered-servers.json');
-const usersPath = path.join(__dirname, '..', 'dist', 'users.json');
+// Persistence Paths (Stored in workspace db/ directory at root)
+const registryPath = path.join(__dirname, '..', '..', 'db', 'registry.json');
+const unregisteredPath = path.join(__dirname, '..', '..', 'db', 'unregistered-servers.json');
+const usersPath = path.join(__dirname, '..', '..', 'db', 'users.json');
 
 // Core Domain Services
 const registry = new RegistryService(registryPath);
@@ -46,8 +46,8 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', createAuthRoutes(userService));
-app.use('/api/admin', createAdminRoutes(userService));
+app.use('/orch/auth', createAuthRoutes(userService));
+app.use('/orch/admin', createAdminRoutes(userService));
 app.use(createHealthRoutes(registry, PORT));
 app.use(createRegistrationRoutes(registry, portAllocator, serverScanner, SELF_PROJECT_NAME));
 app.use(createRegistryRoutes(registry, serverScanner));
@@ -59,7 +59,7 @@ app.use(express.static(guiDistPath));
 
 // SPA Fallback: Route all non-API requests to index.html
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.includes('.')) {
+  if (req.path.startsWith('/orch') || req.path.startsWith('/reports') || req.path.includes('.')) {
     return next();
   }
   const indexPath = path.join(guiDistPath, 'index.html');

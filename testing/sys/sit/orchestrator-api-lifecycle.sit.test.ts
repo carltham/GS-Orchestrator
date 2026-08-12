@@ -6,7 +6,7 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
 
   test('should successfully register, stop, and restart orchestrator via API', async () => {
     // 1. Initial Self-Registration Verification
-    const registerRes = await fetch(`${ORCHESTRATOR_URL}/api/register`, {
+    const registerRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -20,7 +20,7 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
     expect(registerBody.ports.backend).toBeGreaterThan(0);
 
     // 2. Queue Stop Signal through ProcessServer
-    const stopRes = await fetch(`${ORCHESTRATOR_URL}/api/register/${PROJECT_NAME}`, {
+    const stopRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/${PROJECT_NAME}`, {
       method: 'DELETE'
     });
     expect(stopRes.status).toBe(200);
@@ -28,14 +28,14 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
     expect(stopBody.status).toBe('stopping');
 
     // 3. Peek process signal on ProcessServer (:9999) to confirm stop signal queued
-    const signalsRes = await fetch(`${PROCESS_SERVER_URL}/api/process/signals?projectName=${PROJECT_NAME}&consume=false`);
+    const signalsRes = await fetch(`${PROCESS_SERVER_URL}/ps/process/signals?projectName=${PROJECT_NAME}&consume=false`);
     expect(signalsRes.status).toBe(200);
     const signalsBody = await signalsRes.json() as any;
     const stopSignal = signalsBody.signals.find((s: any) => s.action === 'STOP');
     expect(stopSignal).toBeDefined();
 
     // 4. Simulate Client confirming stopped status in Orchestrator registry
-    const stoppedConfirmRes = await fetch(`${ORCHESTRATOR_URL}/api/register/${PROJECT_NAME}/stopped`, {
+    const stoppedConfirmRes = await fetch(`${ORCHESTRATOR_URL}/orch/reporting/project/${PROJECT_NAME}/is-stopped`, {
       method: 'POST'
     });
     expect(stoppedConfirmRes.status).toBe(200);
@@ -43,7 +43,7 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
     expect(confirmBody.status).toBe('stopped');
 
     // 5. Reregister GS-Orchestrator to trigger startup state
-    const reregisterRes = await fetch(`${ORCHESTRATOR_URL}/api/register`, {
+    const reregisterRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -45,27 +45,27 @@ export class OrchestratorService {
   ) {}
 
   getHealth(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/health`);
+    return this.http.get(`${this.baseUrl}/reports/health`);
   }
 
   getApiHealth(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/health`);
+    return this.http.get(`${this.baseUrl}/orch/reporting/health`);
   }
 
   getRegistry(): Observable<RegistryData> {
-    return this.http.get<RegistryData>(`${this.baseUrl}/api/registry`, {
+    return this.http.get<RegistryData>(`${this.baseUrl}/orch/project/registry`, {
       headers: this.authService.getAuthHeaders()
     });
   }
 
   getProjectCount(): Observable<{ count: number }> {
-    return this.http.get<{ count: number }>(`${this.baseUrl}/api/count`, {
+    return this.http.get<{ count: number }>(`${this.baseUrl}/orch/project/count`, {
       headers: this.authService.getAuthHeaders()
     });
   }
 
   getUnregisteredServers(): Observable<UnregisteredServersData> {
-    return this.http.get<UnregisteredServersData>(`${this.baseUrl}/api/unregistered`, {
+    return this.http.get<UnregisteredServersData>(`${this.baseUrl}/orch/project/unregistered`, {
       headers: this.authService.getAuthHeaders()
     });
   }
@@ -76,7 +76,7 @@ export class OrchestratorService {
     serviceTypes?: Record<string, string>;
     basePorts?: Record<string, number>;
   }): Observable<any> {
-    return this.http.post(`${this.baseUrl}/api/register`, data, {
+    return this.http.post(`${this.baseUrl}/orch/project/register`, data, {
       headers: this.authService.getAuthHeaders()
     });
   }
@@ -85,13 +85,13 @@ export class OrchestratorService {
     projectName: string;
     health: { status: string; uptimeSeconds: number };
   }): Observable<any> {
-    return this.http.post(`${this.baseUrl}/api/health`, data, {
+    return this.http.post(`${this.baseUrl}/orch/reporting/project/health`, data, {
       headers: this.authService.getAuthHeaders()
     });
   }
 
   unregisterProject(projectName: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/api/register/${projectName}`, {
+    return this.http.delete(`${this.baseUrl}/orch/project/${projectName}`, {
       headers: this.authService.getAuthHeaders()
     });
   }

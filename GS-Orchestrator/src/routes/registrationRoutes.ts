@@ -12,14 +12,20 @@ export function createRegistrationRoutes(
 ): Router {
   const router = Router();
 
-  // DELETE /api/register/:projectName
-  router.delete('/api/register/:projectName', async (req: Request, res: Response) => {
+  // DELETE /orch/project/:projectName
+  router.delete('/orch/project/:projectName', async (req: Request, res: Response) => {
     try {
       const projectName = req.params.projectName;
 
       if (!projectName) {
         return res.status(400).json({
           error: 'Missing required parameter: projectName',
+        });
+      }
+
+      if (projectName === selfProjectName) {
+        return res.status(400).json({
+          error: `Cannot stop or unregister the main Orchestrator service "${projectName}" itself, as it is the central administration hub.`,
         });
       }
 
@@ -31,7 +37,7 @@ export function createRegistrationRoutes(
       }
 
       // Queue a stop signal for the client via Process Server
-      await fetch('http://localhost:9999/api/process/signals', {
+      await fetch('http://localhost:9999/ps/process/signals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetProject: projectName, action: 'STOP' })
@@ -61,15 +67,21 @@ export function createRegistrationRoutes(
     }
   });
 
-  // POST /api/register/:projectName/stopped
+  // POST /orch/reporting/project/:projectName/is-stopped
   // Mark a project as stopped (keep in registry)
-  router.post('/api/register/:projectName/stopped', async (req: Request, res: Response) => {
+  router.post('/orch/reporting/project/:projectName/is-stopped', async (req: Request, res: Response) => {
     try {
       const projectName = req.params.projectName;
 
       if (!projectName) {
         return res.status(400).json({
           error: 'Missing required parameter: projectName',
+        });
+      }
+
+      if (projectName === selfProjectName) {
+        return res.status(400).json({
+          error: `The main Orchestrator service "${projectName}" is permanently active and cannot be set to stopped.`,
         });
       }
 
@@ -98,8 +110,8 @@ export function createRegistrationRoutes(
     }
   });
 
-  // POST /api/register
-  router.post('/api/register', async (req: Request, res: Response) => {
+  // POST /orch/project/register
+  router.post('/orch/project/register', async (req: Request, res: Response) => {
     try {
       await serverScanner.scanRunningServers().catch(() => {});
 

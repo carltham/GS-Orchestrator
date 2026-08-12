@@ -51,7 +51,7 @@ export class UsersPageComponent implements OnInit {
   }
 
   loadUsers(): void {
-    this.http.get<any>('/api/admin/users', {
+    this.http.get<any>('/orch/admin/users', {
       headers: this.authService.getAuthHeaders()
     }).subscribe({
       next: (res) => {
@@ -68,7 +68,7 @@ export class UsersPageComponent implements OnInit {
   createUser(): void {
     if (!this.newUsername || !this.newPassword) return;
 
-    this.http.post<any>('/api/admin/users', {
+    this.http.post<any>('/orch/admin/users', {
       username: this.newUsername,
       password: this.newPassword,
       role: this.newRole
@@ -91,7 +91,7 @@ export class UsersPageComponent implements OnInit {
   }
 
   toggleUserStatus(user: UserItem): void {
-    const endpoint = user.enabled ? `/api/admin/users/${user.id}/disable` : `/api/admin/users/${user.id}/enable`;
+    const endpoint = user.enabled ? `/orch/admin/users/${user.id}/disable` : `/orch/admin/users/${user.id}/enable`;
     this.http.post<any>(endpoint, {}, {
       headers: this.authService.getAuthHeaders()
     }).subscribe({
@@ -108,7 +108,7 @@ export class UsersPageComponent implements OnInit {
   deleteUser(user: UserItem): void {
     if (!confirm(`Are you sure you want to delete user "${user.username}"?`)) return;
 
-    this.http.delete<any>(`/api/admin/users/${user.id}`, {
+    this.http.delete<any>(`/orch/admin/users/${user.id}`, {
       headers: this.authService.getAuthHeaders()
     }).subscribe({
       next: () => {

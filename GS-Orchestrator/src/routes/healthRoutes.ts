@@ -4,8 +4,8 @@ import { RegistryService } from '../services/RegistryService';
 export function createHealthRoutes(registry: RegistryService, port: number): Router {
   const router = Router();
 
-  // GET /health
-  router.get('/health', (req: Request, res: Response) => {
+  // GET /reports/health
+  router.get('/reports/health', (req: Request, res: Response) => {
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -13,13 +13,13 @@ export function createHealthRoutes(registry: RegistryService, port: number): Rou
     });
   });
 
-  // GET /api/health
-  router.get('/api/health', (req: Request, res: Response) => {
+  // GET /orch/reporting/health
+  router.get('/orch/reporting/health', (req: Request, res: Response) => {
     res.status(200).json({ status: 'ok' });
   });
 
-  // POST /api/health
-  router.post('/api/health', (req: Request, res: Response) => {
+  // POST /orch/reporting/project/health
+  router.post('/orch/reporting/project/health', (req: Request, res: Response) => {
     try {
       const { projectName, health } = req.body;
 

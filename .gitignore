@@ -13,3 +13,4 @@ playwright-report/
 **/logs/
 testing/playwright/test-results/
 testing/playwright/playwright-report/
+testing/temp-apps/

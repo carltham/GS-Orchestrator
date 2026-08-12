@@ -4,9 +4,9 @@ import * as path from 'path';
 import { app } from '../../../GS-Orchestrator/src/server';
 
 describe('GS-Orchestrator Server SFT - Registry Metrics', () => {
-  const distDir = path.join(__dirname, '..', '..', '..', 'GS-Orchestrator', 'dist');
-  const registryPath = path.join(distDir, 'registry.json');
-  const unregisteredPath = path.join(distDir, 'unregistered-servers.json');
+  const dbDir = path.join(__dirname, '..', '..', '..', 'db');
+  const registryPath = path.join(dbDir, 'registry.json');
+  const unregisteredPath = path.join(dbDir, 'unregistered-servers.json');
 
   beforeEach(() => {
     if (fs.existsSync(registryPath)) {
@@ -24,25 +24,25 @@ describe('GS-Orchestrator Server SFT - Registry Metrics', () => {
   });
 
   test('returns 0 when no projects are registered', async () => {
-    const res = await request(app).get('/api/count');
+    const res = await request(app).get('/orch/project/count');
     expect(res.status).toBe(200);
     expect(res.body.count).toBe(0);
   });
 
   test('returns accurate count after project registration', async () => {
-    await request(app).post('/api/register').send({
+    await request(app).post('/orch/project/register').send({
       projectName: 'AppOne',
       path: '/tmp/appone',
       serviceTypes: { backend: 'node-ts' },
     });
 
-    await request(app).post('/api/register').send({
+    await request(app).post('/orch/project/register').send({
       projectName: 'AppTwo',
       path: '/tmp/apptwo',
       serviceTypes: { backend: 'node-ts' },
     });
 
-    const res = await request(app).get('/api/count');
+    const res = await request(app).get('/orch/project/count');
     expect(res.status).toBe(200);
     expect(res.body.count).toBe(2);
   });
