@@ -2,7 +2,7 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
 
   const PROCESS_SERVER_URL = 'http://localhost:9999';
   const ORCHESTRATOR_URL = 'http://localhost:10000';
-  const PROJECT_NAME = 'GS-Orchestrator';
+  const PROJECT_NAME = 'SIT-Fresh-Verification-App';
 
   test('should successfully register, stop, and restart orchestrator via API', async () => {
     // 1. Initial Self-Registration Verification
@@ -15,9 +15,9 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
         serviceTypes: { backend: 'node-ts', frontend: 'angular' }
       })
     });
-    expect([200, 201]).toContain(registerRes.status);
+    expect(registerRes.status).toBe(201);
     const registerBody = await registerRes.json() as any;
-    expect(registerBody.ports.backend).toBe(10000);
+    expect(registerBody.ports.backend).toBeGreaterThan(0);
 
     // 2. Queue Stop Signal through ProcessServer
     const stopRes = await fetch(`${ORCHESTRATOR_URL}/api/register/${PROJECT_NAME}`, {
@@ -28,7 +28,7 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
     expect(stopBody.status).toBe('stopping');
 
     // 3. Peek process signal on ProcessServer (:9999) to confirm stop signal queued
-    const signalsRes = await fetch(`${PROCESS_SERVER_URL}/api/process/signals?projectName=${PROJECT_NAME}`);
+    const signalsRes = await fetch(`${PROCESS_SERVER_URL}/api/process/signals?projectName=${PROJECT_NAME}&consume=false`);
     expect(signalsRes.status).toBe(200);
     const signalsBody = await signalsRes.json() as any;
     const stopSignal = signalsBody.signals.find((s: any) => s.action === 'STOP');
@@ -54,6 +54,6 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
     });
     expect(reregisterRes.status).toBe(200);
     const reregisterBody = await reregisterRes.json() as any;
-    expect(reregisterBody.ports.backend).toBe(10000);
+    expect(reregisterBody.ports.backend).toBeGreaterThan(0);
   });
 });

@@ -57,8 +57,13 @@ app.post('/api/installer/generate', (req: Request, res: Response) => {
 // GET /api/process/signals - Renders and consumes pending control signals for a project
 app.get('/api/process/signals', (req: Request, res: Response) => {
   const projectName = (req.query.projectName as string) || '*';
-  const signals = processRegistry.consumeSignalsForProject(projectName);
-  res.json({ projectName, signals });
+  const consume = req.query.consume !== 'false';
+  
+  const signals = consume 
+    ? processRegistry.consumeSignalsForProject(projectName)
+    : processRegistry.peekSignalsForProject(projectName);
+
+  res.json({ projectName, consume, signals });
 });
 
 // POST /api/process/signals - Queues a generic control signal targeting a project

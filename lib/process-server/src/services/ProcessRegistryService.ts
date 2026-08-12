@@ -38,6 +38,12 @@ export class ProcessRegistryService {
     return fullSignal;
   }
 
+  public peekSignalsForProject(projectName: string): ControlSignal[] {
+    return this.signalsQueue.filter(
+      s => s.targetProject === projectName || s.targetProject === '*'
+    );
+  }
+
   public consumeSignalsForProject(projectName: string): ControlSignal[] {
     const matching = this.signalsQueue.filter(
       s => s.targetProject === projectName || s.targetProject === '*'

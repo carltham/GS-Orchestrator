@@ -26,8 +26,29 @@ export class ProcessClient {
   constructor(config: ProcessClientConfig) {
     this.projectName = config.projectName;
     this.processServerUrl = config.processServerUrl || process.env.PROCESS_SERVER_URL || 'http://localhost:9999';
-    this.pollIntervalMs = config.pollIntervalMs || 15000;
-    this.heartbeatIntervalMs = config.heartbeatIntervalMs || 15000;
+    
+    // Attempt to load operator-set constants from static git-level configuration files
+    let filePollIntervalMs: number | undefined;
+    let fileHeartbeatIntervalMs: number | undefined;
+    try {
+      // Find the absolute root configuration path (relative to process.cwd() or similar)
+      const sysConfigPath = path.resolve(process.cwd(), 'config', 'sys-config.json');
+      if (fs.existsSync(sysConfigPath)) {
+        const sysRaw = fs.readFileSync(sysConfigPath, 'utf8');
+        const sysParsed = JSON.parse(sysRaw);
+        if (typeof sysParsed.pollIntervalMs === 'number') {
+          filePollIntervalMs = sysParsed.pollIntervalMs;
+        }
+        if (typeof sysParsed.heartbeatIntervalMs === 'number') {
+          fileHeartbeatIntervalMs = sysParsed.heartbeatIntervalMs;
+        }
+      }
+    } catch (err) {
+      // Ignore config loading errors; fall back to defaults safely
+    }
+
+    this.pollIntervalMs = config.pollIntervalMs || filePollIntervalMs || 15000;
+    this.heartbeatIntervalMs = config.heartbeatIntervalMs || fileHeartbeatIntervalMs || 15000;
 
     this.logDir = path.resolve(process.cwd(), 'logs');
     this.logFilePath = path.join(this.logDir, 'process-client.log');
@@ -98,9 +119,45 @@ export class ProcessClient {
 
   public async stop(): Promise<void> {
     this.isRunning = false;
-    if (this.pollTimer) clearInterval(this.pollTimer);
-    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
     this.log(`Stopped polling loop.`);
+  }
+
+  /**
+   * Safe programmatic setter to speed up/slow down polling during automated tests.
+   * Auto-restarts active timer loops immediately for live synchronization.
+   */
+  public setPollIntervalMs(ms: number): void {
+    this.pollIntervalMs = ms;
+    this.log(`Dynamic poll interval modified to: ${ms}ms`);
+    if (this.isRunning) {
+      if (this.pollTimer) {
+        clearInterval(this.pollTimer);
+      }
+      this.pollTimer = setInterval(() => this.pollSignals(), this.pollIntervalMs);
+    }
+  }
+
+  /**
+   * Safe programmatic setter to scale heartbeats during automated tests.
+   * Auto-restarts active timer loops immediately for live synchronization.
+   */
+  public setHeartbeatIntervalMs(ms: number): void {
+    this.heartbeatIntervalMs = ms;
+    this.log(`Dynamic heartbeat interval modified to: ${ms}ms`);
+    if (this.isRunning) {
+      if (this.heartbeatTimer) {
+        clearInterval(this.heartbeatTimer);
+      }
+      this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
+    }
   }
 
   private async sendHeartbeat(): Promise<void> {

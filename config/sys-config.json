@@ -1,0 +1,4 @@
+{
+  "pollIntervalMs": 15000,
+  "heartbeatIntervalMs": 15000
+}

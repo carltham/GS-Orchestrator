@@ -18,7 +18,7 @@ describe('Process Server (:9999) - API Controls SIT', () => {
     expect(body.signal.action).toBe('STOP');
 
     // Poll signal queue for GS-Orchestrator
-    const signalsRes = await fetch(`${PROCESS_SERVER_URL}/api/process/signals?projectName=GS-Orchestrator`);
+    const signalsRes = await fetch(`${PROCESS_SERVER_URL}/api/process/signals?projectName=GS-Orchestrator&consume=false`);
     expect(signalsRes.status).toBe(200);
 
     const signalsBody = await signalsRes.json() as any;

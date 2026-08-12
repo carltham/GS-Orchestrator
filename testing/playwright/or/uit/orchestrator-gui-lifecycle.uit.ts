@@ -3,8 +3,24 @@ import { test, expect } from '@playwright/test';
 test.describe('GS-Orchestrator Lifecycle - GUI Integration Suite', () => {
 
   const ORCHESTRATOR_URL = 'http://localhost:10000';
+  const PROJECT_NAME = 'SIT-Fresh-Verification-App';
 
   test.beforeEach(async ({ page }) => {
+    // Ensure 'SIT-Fresh-Verification-App' is registered and marked as running in the database
+    try {
+      await fetch(`${ORCHESTRATOR_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectName: PROJECT_NAME,
+          path: '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator',
+          serviceTypes: { backend: 'node-ts', frontend: 'angular' }
+        })
+      });
+    } catch (err) {
+      console.warn('⚠️ Could not complete pre-test registration setup:', err);
+    }
+
     // Navigate to Orchestrator landing page
     await page.goto(ORCHESTRATOR_URL);
     await page.waitForLoadState('networkidle');
@@ -27,11 +43,11 @@ test.describe('GS-Orchestrator Lifecycle - GUI Integration Suite', () => {
     await page.locator('[data-testid="nav-tab-projects"]').click();
     await page.waitForSelector('[data-testid="registered-projects-table"]');
 
-    // 2. Identify GS-Orchestrator Row and select status badge to trigger state change modal
-    const orchestratorRow = page.locator('tr:has-text("GS-Orchestrator")');
-    await expect(orchestratorRow).toBeVisible();
+    // 2. Identify Target Test Row and select status badge to trigger state change modal
+    const targetRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: PROJECT_NAME }) });
+    await expect(targetRow).toBeVisible();
 
-    const statusBadge = orchestratorRow.locator('.badge-clickable');
+    const statusBadge = targetRow.locator('.badge-clickable');
     await expect(statusBadge).toContainText('running');
     await statusBadge.click();
 

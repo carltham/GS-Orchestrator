@@ -10,7 +10,6 @@ import { createHealthRoutes } from './routes/healthRoutes';
 import { createRegistrationRoutes } from './routes/registrationRoutes';
 import { createRegistryRoutes } from './routes/registryRoutes';
 import { createScannerRoutes } from './routes/scannerRoutes';
-import signalRoutes from './routes/signalRoutes';
 import { createAuthRoutes } from './routes/authRoutes';
 import { createAdminRoutes } from './routes/adminRoutes';
 import { PortAllocatorService } from './services/PortAllocatorService';
@@ -46,17 +45,6 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 
-// Installer Script Endpoints
-app.get('/install.sh', (req, res) => {
-  const scriptPath = path.join(__dirname, '..', '..', 'lib', 'orchestrator-client', 'install-client.sh');
-  res.sendFile(scriptPath);
-});
-
-app.get('/install.js', (req, res) => {
-  const scriptPath = path.join(__dirname, '..', '..', 'lib', 'orchestrator-client', 'install-client.js');
-  res.sendFile(scriptPath);
-});
-
 // Routes
 app.use('/api/auth', createAuthRoutes(userService));
 app.use('/api/admin', createAdminRoutes(userService));
@@ -64,7 +52,6 @@ app.use(createHealthRoutes(registry, PORT));
 app.use(createRegistrationRoutes(registry, portAllocator, serverScanner, SELF_PROJECT_NAME));
 app.use(createRegistryRoutes(registry, serverScanner));
 app.use(createScannerRoutes(serverScanner));
-app.use('/api/signals', signalRoutes);
 
 // Static GUI Asset Hosting (Angular GS-Orchestrator-GUI)
 const guiDistPath = path.join(__dirname, '..', '..', 'GS-Orchestrator-GUI', 'dist', 'gs-orchestrator-gui', 'browser');
@@ -72,7 +59,7 @@ app.use(express.static(guiDistPath));
 
 // SPA Fallback: Route all non-API requests to index.html
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (req.path.startsWith('/api') || req.path.includes('.')) {
     return next();
   }
   const indexPath = path.join(guiDistPath, 'index.html');

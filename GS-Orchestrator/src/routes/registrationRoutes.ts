@@ -3,7 +3,6 @@ import { Request, Response, Router } from 'express';
 import { PortAllocatorService } from '../services/PortAllocatorService';
 import { RegistryService } from '../services/RegistryService';
 import { ServerScannerService } from '../services/ServerScannerService';
-import { signalService } from '../services/SignalService';
 
 export function createRegistrationRoutes(
   registry: RegistryService,
@@ -38,8 +37,6 @@ export function createRegistrationRoutes(
         body: JSON.stringify({ targetProject: projectName, action: 'STOP' })
       }).catch(err => {
         console.warn(`⚠️ Could not post STOP signal to Process Server: ${err.message}`);
-        // Fallback to legacy SignalService during transition state
-        signalService.queueSignal('stop', projectName);
       });
 
       if (project) {
