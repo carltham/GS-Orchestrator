@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest --testPathIgnorePatterns='testing/'",
-    "test:sft": "jest --config jest.config.js --testMatch '**/OrchestratorServer-SFT.test.ts' --coverage --collectCoverageFrom='src/**/*.ts'",
+    "test:sft": "jest --config jest.config.js --testMatch '**/*.sft.test.ts' --coverage --collectCoverageFrom='src/**/*.ts' --runInBand",
     "test:sit": "jest --config jest.config.js --testMatch '**/*.sit.test.ts' --runInBand",
     "startupHandler": "node startupHandler.js"
   },
