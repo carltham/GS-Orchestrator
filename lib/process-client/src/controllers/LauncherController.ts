@@ -2,16 +2,22 @@ import fetch from 'node-fetch';
 import { ClientState } from '../models/ClientState';
 import { LoggerView } from '../views/LoggerView';
 import { TelemetryView } from '../views/TelemetryView';
+import { BeatHolder } from '../utils/BeatHolder';
+import { SignalProcessor } from '../services/SignalProcessor';
 
 export class LauncherController {
   private state: ClientState;
   private logger: LoggerView;
   private telemetry: TelemetryView;
+  private signalProcessor: SignalProcessor;
 
   constructor(state: ClientState, logger: LoggerView, telemetry: TelemetryView) {
     this.state = state;
     this.logger = logger;
     this.telemetry = telemetry;
+    this.signalProcessor = new SignalProcessor(this.state, this.logger, async () => {
+      await this.stop();
+    });
   }
 
   public async start(): Promise<void> {
@@ -34,20 +40,19 @@ export class LauncherController {
     // Send immediate heartbeat to register state
     await this.sendHeartbeat();
 
-    // Setup active background loops
-    this.state.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.state.heartbeatIntervalMs);
-    this.state.pollTimer = setInterval(() => this.pollSignals(), this.state.pollIntervalMs);
+    // Start metronome
+    const defaultBpm = 60000 / this.state.pollIntervalMs;
+    this.state.metronome = new BeatHolder(defaultBpm, async (tick) => {
+      await this.signalProcessor.pollAndProcess();
+      await this.sendHeartbeat();
+    });
+    this.state.metronome.start();
   }
 
   public async stop(): Promise<void> {
     this.state.isRunning = false;
-    if (this.state.pollTimer) {
-      clearInterval(this.state.pollTimer);
-      this.state.pollTimer = null;
-    }
-    if (this.state.heartbeatTimer) {
-      clearInterval(this.state.heartbeatTimer);
-      this.state.heartbeatTimer = null;
+    if (this.state.metronome) {
+      this.state.metronome.stop();
     }
     this.logger.log(`Stopped polling and status heartbeats loops.`);
   }
@@ -55,22 +60,24 @@ export class LauncherController {
   public setPollIntervalMs(ms: number): void {
     this.state.pollIntervalMs = ms;
     this.logger.log(`Dynamic polling frequency adjusted to: ${ms}ms`);
-    if (this.state.isRunning) {
-      if (this.state.pollTimer) {
-        clearInterval(this.state.pollTimer);
-      }
-      this.state.pollTimer = setInterval(() => this.pollSignals(), this.state.pollIntervalMs);
-    }
+    this.resetMetronome();
   }
 
   public setHeartbeatIntervalMs(ms: number): void {
     this.state.heartbeatIntervalMs = ms;
     this.logger.log(`Dynamic heartbeat frequency adjusted to: ${ms}ms`);
-    if (this.state.isRunning) {
-      if (this.state.heartbeatTimer) {
-        clearInterval(this.state.heartbeatTimer);
-      }
-      this.state.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.state.heartbeatIntervalMs);
+    this.resetMetronome();
+  }
+
+  private resetMetronome(): void {
+    if (this.state.isRunning && this.state.metronome) {
+      this.state.metronome.stop();
+      const newBpm = 60000 / this.state.pollIntervalMs;
+      this.state.metronome = new BeatHolder(newBpm, async (tick) => {
+        await this.signalProcessor.pollAndProcess();
+        await this.sendHeartbeat();
+      });
+      this.state.metronome.start();
     }
   }
 
@@ -134,58 +141,6 @@ export class LauncherController {
       }
     } catch (err: any) {
       this.logger.log(`Heartbeat failed: ${err.message}`, 'WARN');
-    }
-  }
-
-  private async pollSignals(): Promise<void> {
-    try {
-      const res = await fetch(`${this.state.processServerUrl}/ps/process/signals?projectName=${encodeURIComponent(this.state.projectName)}`);
-      if (!res.ok) return;
-
-      const data = await res.json() as { signals?: Array<{ id: string; action: string; ports?: { [key: string]: number } }> };
-      const signals = data.signals || [];
-
-      for (const [key, val] of Object.entries(signals)) {
-        const signal = val as { id: string; action: string; ports?: { [key: string]: number } };
-        this.logger.log(`Received control plane signal: ${signal.action} (ID: ${signal.id})`);
-        if (this.state.adapter) {
-          switch (signal.action) {
-            case 'START':
-              this.logger.log(`Executing START signal via adapter...`);
-              await this.state.adapter.start(signal.ports);
-              break;
-            case 'STOP':
-              this.logger.log(`Executing STOP signal via adapter...`);
-              await this.state.adapter.stop();
-              break;
-            case 'DELETE':
-              this.logger.log(`Executing DELETE signal...`);
-              const status = await this.state.adapter.getStatus();
-              if (status.status !== 'RUNNING') {
-                this.logger.log(`Target project is stopped. Unregistering and shutting down client...`);
-                try {
-                  await fetch(`${this.state.processServerUrl}/ps/project/${encodeURIComponent(this.state.projectName)}`, {
-                    method: 'DELETE'
-                  });
-                  this.logger.log(`Deregistered from ProcessServer.`);
-                } catch (err: any) {
-                  this.logger.log(`Could not notify ProcessServer of unregistration: ${err.message}`, 'WARN');
-                }
-                await this.stop();
-                process.exit(0);
-              } else {
-                this.logger.log(`Cannot execute DELETE: target application is still active (status: ${status.status})`, 'ERROR');
-              }
-              break;
-            default:
-              this.logger.log(`Unknown control plane signal received: ${signal.action}`, 'WARN');
-              break;
-          }
-        }
-        await this.sendHeartbeat();
-      }
-    } catch (err: any) {
-      this.logger.log(`Poll signals failed: ${err.message}`, 'WARN');
     }
   }
 }

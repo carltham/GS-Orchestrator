@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { IProcessAdapter } from '../types/IProcessAdapter';
+import { BeatHolder } from '../utils/BeatHolder';
 
 export interface ProcessClientConfig {
   projectName: string;
@@ -19,8 +20,7 @@ export class ClientState {
   public isRunning: boolean = false;
   public isRegistered: boolean = false;
 
-  public pollTimer: NodeJS.Timeout | null = null;
-  public heartbeatTimer: NodeJS.Timeout | null = null;
+  public metronome: BeatHolder | null = null;
 
   public readonly logDir: string;
   public readonly logFilePath: string;
