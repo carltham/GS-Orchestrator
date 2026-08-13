@@ -1,11 +1,18 @@
 import { ClientState } from '../models/ClientState';
 
+export interface SubSystemInfo {
+  port: number;
+  status: 'start' | 'starting' | 'running' | 'partially' | 'stop' | 'stopping' | 'stopped' | string;
+  pid?: number | null;
+  error?: string;
+}
+
 export interface HeartbeatPayload {
   projectName: string;
   status: string;
   pid: number | null;
   timestamp: string;
-  components?: Record<string, number | null>;
+  components?: Record<string, SubSystemInfo>;
 }
 
 export interface RegisterPayload {
@@ -21,7 +28,7 @@ export class TelemetryView {
     this.state = state;
   }
 
-  public formatHeartbeat(statusStr: string, pidNum: number | null, components: Record<string, number | null> = {}): HeartbeatPayload {
+  public formatHeartbeat(statusStr: string, pidNum: number | null, components: Record<string, SubSystemInfo> = {}): HeartbeatPayload {
     return {
       projectName: this.state.projectName,
       status: statusStr,

@@ -40,9 +40,9 @@ export class PortAllocatorService {
     const existingProject = registryState.projects[projectName];
 
     if (existingProject && existingProject.components) {
-      for (const [key, p] of Object.entries(existingProject.components)) {
+      for (const [key, info] of Object.entries(existingProject.components)) {
         if (key.startsWith(`${serviceKey}::`) || key === serviceKey) {
-          return p;
+          return info.port;
         }
       }
     }
@@ -55,8 +55,8 @@ export class PortAllocatorService {
     for (const [otherName, proj] of Object.entries(registryState.projects)) {
       if (otherName === projectName) continue;
       if (proj.components) {
-        for (const p of Object.values(proj.components)) {
-          usedPortsByOtherProjects.add(p);
+        for (const info of Object.values(proj.components)) {
+          usedPortsByOtherProjects.add(info.port);
         }
       }
     }

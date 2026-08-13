@@ -5,7 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { ProjectEntry } from '../domain/ProjectEntry';
+import { ProjectEntry, SubSystemInfo } from '../domain/ProjectEntry';
 import { RegistryData } from '../domain/RegistryData';
 
 export class RegistryService {
@@ -93,7 +93,7 @@ export class RegistryService {
   registerProject(
     name: string,
     projectPath: string,
-    components: Record<string, number>,
+    components: Record<string, SubSystemInfo>,
     ticket?: string
   ): ProjectEntry {
     const data = this.load();

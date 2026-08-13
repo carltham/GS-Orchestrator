@@ -3,6 +3,7 @@ import { Request, Response, Router } from 'express';
 import { PortAllocatorService } from '../services/PortAllocatorService';
 import { RegistryService } from '../services/RegistryService';
 import { ServerScannerService } from '../services/ServerScannerService';
+import { SubSystemInfo } from '../domain/ProjectEntry';
 
 export function createRegistrationRoutes(
   registry: RegistryService,
@@ -130,14 +131,14 @@ export function createRegistrationRoutes(
         existing.registeredAt = new Date().toISOString();
 
         if (projectName === selfProjectName) {
-          existing.components['backend::node-ts'] = 10000;
+          existing.components['backend::node-ts'] = { port: 10000, status: 'running' };
           for (const key of Object.keys(existing.components)) {
             if (key.startsWith('frontend::')) {
-              existing.components[key] = 10000;
+              existing.components[key] = { port: 10000, status: 'running' };
             }
           }
           if (!existing.components['frontend::angular']) {
-            existing.components['frontend::angular'] = 10000;
+            existing.components['frontend::angular'] = { port: 10000, status: 'running' };
           }
         }
 
@@ -146,9 +147,9 @@ export function createRegistrationRoutes(
         console.log(`✅ Project "${projectName}" already registered, updated status to running`);
 
         const ports: Record<string, number> = {};
-        for (const [compKey, allocatedPort] of Object.entries(existing.components)) {
+        for (const [compKey, info] of Object.entries(existing.components)) {
           const serviceKey = compKey.split('::')[0];
-          ports[serviceKey] = allocatedPort;
+          ports[serviceKey] = info.port;
         }
 
         return res.json({
@@ -172,17 +173,17 @@ export function createRegistrationRoutes(
       }
 
       const ports: Record<string, number> = {};
-      const components: Record<string, number> = {};
+      const components: Record<string, SubSystemInfo> = {};
 
       if (projectName === selfProjectName) {
         ports['backend'] = 10000;
-        components['backend::node-ts'] = 10000;
+        components['backend::node-ts'] = { port: 10000, status: 'running' };
         for (const [serviceKey, serverType] of Object.entries(serviceTypes)) {
           if (serviceKey === 'backend') {
             continue;
           } else if (serviceKey === 'frontend') {
             ports['frontend'] = 10000;
-            components[`frontend::${serverType}`] = 10000;
+            components[`frontend::${serverType}`] = { port: 10000, status: 'running' };
           } else {
             const customBase = basePorts[serviceKey];
             const allocatedPort = portAllocator.allocatePort(
@@ -192,7 +193,7 @@ export function createRegistrationRoutes(
               customBase
             );
             ports[serviceKey] = allocatedPort;
-            components[`${serviceKey}::${serverType}`] = allocatedPort;
+            components[`${serviceKey}::${serverType}`] = { port: allocatedPort, status: 'running' };
           }
         }
       } else {
@@ -205,7 +206,7 @@ export function createRegistrationRoutes(
             customBase
           );
           ports[serviceKey] = allocatedPort;
-          components[`${serviceKey}::${serverType}`] = allocatedPort;
+          components[`${serviceKey}::${serverType}`] = { port: allocatedPort, status: 'running' };
         }
       }
 

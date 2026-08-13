@@ -6,11 +6,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface SubSystemInfo {
+  port: number;
+  status: 'start' | 'starting' | 'running' | 'partially' | 'stop' | 'stopping' | 'stopped' | string;
+  pid?: number | null;
+  error?: string;
+}
+
 export interface ProjectEntry {
   name: string;
   path: string;
   registeredAt: string;
-  components: Record<string, number>;
+  components: Record<string, SubSystemInfo>;
   status: 'start' | 'starting' | 'running' | 'partially' | 'stop' | 'stopping' | 'stopped';
   pid?: number | null;
   ticket?: string;
@@ -111,14 +118,14 @@ export class ProjectRegistry {
     const data = this.load();
     const existing = data.projects[name];
 
-    const componentsPorts: Record<string, number> = existing?.components || {};
+    const componentsPorts: Record<string, SubSystemInfo> = existing?.components || {};
 
     // Allocate ports for new components using the service mapping
     for (const [componentKey, serviceType] of Object.entries(serviceTypes)) {
       const serviceName = componentKey.split('::')[0] || componentKey;
       
       let alreadyAllocated = false;
-      for (const [existingCompKey, port] of Object.entries(componentsPorts)) {
+      for (const [existingCompKey, info] of Object.entries(componentsPorts)) {
         if (existingCompKey.startsWith(`${serviceName}::`) || existingCompKey === serviceName) {
           alreadyAllocated = true;
           break;
@@ -128,7 +135,11 @@ export class ProjectRegistry {
       if (!alreadyAllocated) {
         const allocatedPort = this.allocatePort(name, serviceName, serviceType, data);
         const compKeyWithService = `${serviceName}::${serviceType}`;
-        componentsPorts[compKeyWithService] = allocatedPort;
+        componentsPorts[compKeyWithService] = {
+          port: allocatedPort,
+          status: 'running',
+          pid: null
+        };
       }
     }
 
@@ -164,8 +175,8 @@ export class ProjectRegistry {
     for (const [otherName, proj] of Object.entries(data.projects)) {
       if (otherName === projectName) continue;
       if (proj.components) {
-        for (const p of Object.values(proj.components)) {
-          usedPorts.add(p);
+        for (const info of Object.values(proj.components)) {
+          usedPorts.add(info.port);
         }
       }
     }

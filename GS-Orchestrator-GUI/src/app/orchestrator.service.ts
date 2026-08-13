@@ -3,11 +3,18 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './services/auth.service';
 
+export interface SubSystemInfo {
+  port: number;
+  status: string;
+  pid?: number | null;
+  error?: string;
+}
+
 export interface ProjectEntry {
   name: string;
   path: string;
   registeredAt: string;
-  components: Record<string, number>;
+  components: Record<string, SubSystemInfo>;
   status: string;
   ticket?: string;
 }

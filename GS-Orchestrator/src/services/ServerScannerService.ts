@@ -102,8 +102,8 @@ export class ServerScannerService {
     for (const [projName, proj] of Object.entries(registryData.projects)) {
       if (!proj.components || Object.keys(proj.components).length === 0) continue;
       registeredProjectNames.push(projName);
-      for (const port of Object.values(proj.components)) {
-        allRegisteredPorts.push(port);
+      for (const info of Object.values(proj.components)) {
+        allRegisteredPorts.push(info.port);
       }
     }
 
@@ -116,8 +116,8 @@ export class ServerScannerService {
       let occupiedCount = 0;
       const totalPorts = Object.keys(proj.components).length;
 
-      for (const port of Object.values(proj.components)) {
-        if (portsOccupiedMap[port]) {
+      for (const info of Object.values(proj.components)) {
+        if (portsOccupiedMap[info.port]) {
           occupiedCount++;
         }
       }
@@ -146,8 +146,8 @@ export class ServerScannerService {
         registeredProjectPaths.push(proj.path);
       }
       if (proj.components) {
-        for (const port of Object.values(proj.components)) {
-          registeredPortsArray.push(port);
+        for (const info of Object.values(proj.components)) {
+          registeredPortsArray.push(info.port);
         }
       }
     }

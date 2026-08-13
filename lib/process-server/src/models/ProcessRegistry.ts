@@ -3,12 +3,19 @@
  * status logs, and signal queues.
  */
 
+export interface SubSystemInfo {
+  port: number;
+  status: 'start' | 'starting' | 'running' | 'partially' | 'stop' | 'stopping' | 'stopped' | string;
+  pid?: number | null;
+  error?: string;
+}
+
 export interface ProcessHeartbeat {
   projectName: string;
   status: string;
   pid?: number | null;
   timestamp: string;
-  components?: Record<string, number | null>;
+  components?: Record<string, SubSystemInfo>;
 }
 
 export interface ControlSignal {

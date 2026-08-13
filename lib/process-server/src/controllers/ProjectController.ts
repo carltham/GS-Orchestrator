@@ -21,9 +21,9 @@ export class ProjectController {
 
       // Map components back to ports format expected by standard Process Clients
       const ports: Record<string, number> = {};
-      for (const [compKey, allocatedPort] of Object.entries(entry.components)) {
+      for (const [compKey, info] of Object.entries(entry.components)) {
         const serviceKey = compKey.split('::')[0] || compKey;
-        ports[serviceKey] = allocatedPort;
+        ports[serviceKey] = info.port;
       }
 
       res.status(200).json({

@@ -31,9 +31,9 @@ export class ProjectsPageComponent implements OnInit {
     });
   }
 
-  getComponentEntries(components: Record<string, number>): string {
+  getComponentEntries(components: Record<string, any>): string {
     return Object.entries(components)
-      .map(([k, v]) => `${k}: ${v}`)
+      .map(([k, info]) => `${k} (Port: ${info.port || 'N/A'}, PID: ${info.pid || 'N/A'}, Status: ${info.status || 'unknown'})`)
       .join(', ');
   }
 
