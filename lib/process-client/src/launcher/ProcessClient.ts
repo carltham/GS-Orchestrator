@@ -22,6 +22,7 @@ export class ProcessClient {
   private pollTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
+  private isRegisteredWithOrchestrator: boolean = false;
   private logDir: string;
   private logFilePath: string;
 
@@ -101,9 +102,6 @@ export class ProcessClient {
 
     this.log(`Started process client polling against ${this.processServerUrl}`);
 
-    // Client-driven registration with Orchestrator Server
-    await this.registerWithOrchestrator();
-
     // Automatically trigger local process startup via adapter on client launch
     if (this.adapter) {
       this.log(`Launching target process via ProcessAdapter...`);
@@ -166,7 +164,7 @@ export class ProcessClient {
     }
   }
 
-  private async registerWithOrchestrator(): Promise<void> {
+  private async registerWithOrchestrator(): Promise<boolean> {
     try {
       const payload = {
         projectName: this.projectName,
@@ -183,11 +181,15 @@ export class ProcessClient {
       if (res.ok) {
         const data = await res.json() as any;
         this.log(`Registered successfully with Orchestrator (${this.orchestratorUrl}). Allocated ports: ${JSON.stringify(data.ports)}`);
+        this.isRegisteredWithOrchestrator = true;
+        return true;
       } else {
         this.log(`Registration with Orchestrator returned status: ${res.status}`, 'WARN');
+        return false;
       }
     } catch (err: any) {
       this.log(`Registration with Orchestrator failed: ${err.message}`, 'WARN');
+      return false;
     }
   }
 
@@ -200,6 +202,12 @@ export class ProcessClient {
         const status = await this.adapter.getStatus();
         statusStr = status.status;
         pidNum = status.pid || null;
+      }
+
+      // If components are up and healthy (RUNNING), check if we need to register with the Orchestrator
+      if (statusStr === 'RUNNING' && !this.isRegisteredWithOrchestrator) {
+        this.log(`Components are running and healthy. Initiating orchestrator registration...`);
+        await this.registerWithOrchestrator();
       }
 
       const payload = {
