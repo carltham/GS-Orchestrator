@@ -60,6 +60,6 @@ export class RegisterProjectComponent implements OnInit {
   }
 
   private refreshProjects(): void {
-    window.dispatchEvent(new CustomEvent('refreshData'));
+    this.appState.requestRefresh();
   }
 }

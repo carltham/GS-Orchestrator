@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppStateService, AppState } from '../../../services/app-state.service';
 import { OrchestratorService, ProjectEntry } from '../../../orchestrator.service';
+import { DialogService } from '../../../services/dialog.service';
 import { StateModalComponent } from '../../modals/state-modal/state-modal.component';
 
 @Component({
@@ -19,7 +20,8 @@ export class ProjectsPageComponent implements OnInit {
 
   constructor(
     private appState: AppStateService,
-    private orchestratorService: OrchestratorService
+    private orchestratorService: OrchestratorService,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -45,33 +47,44 @@ export class ProjectsPageComponent implements OnInit {
     this.selectedProject = null;
   }
 
-  onStopProject(): void {
+  async onStopProject(): Promise<void> {
     if (!this.selectedProject) return;
 
     const projectName = this.selectedProject.name;
-    if (!confirm(`Are you sure you want to stop project "${projectName}"?`)) {
-      return;
-    }
+    const confirmed = await this.dialogService.confirm(
+      `Are you sure you want to stop project "${projectName}"?`,
+      'Stop Project'
+    );
+    if (!confirmed) return;
 
     this.orchestratorService.unregisterProject(projectName).subscribe({
-      next: (res: any) => {
-        alert(`Project "${projectName}" is now stopping. Stop signal sent to client.`);
+      next: async (res: any) => {
+        await this.dialogService.alert(
+          `Project "${projectName}" is now stopping. Stop signal sent to client.`,
+          'Project Stopping'
+        );
         this.closeStateModal();
         setTimeout(() => this.refresh(), 500);
       },
-      error: (err: any) => {
-        alert(`Failed to stop project: ${err.error?.error || 'Unknown error'}`);
+      error: async (err: any) => {
+        await this.dialogService.alert(
+          `Failed to stop project: ${err.error?.error || 'Unknown error'}`,
+          'Error'
+        );
       }
     });
   }
 
-  onRestartProject(): void {
+  async onRestartProject(): Promise<void> {
     if (!this.selectedProject) return;
-    alert(`Restart functionality coming soon for project "${this.selectedProject.name}"`);
+    await this.dialogService.alert(
+      `Restart functionality coming soon for project "${this.selectedProject.name}"`,
+      'Feature Coming Soon'
+    );
     this.closeStateModal();
   }
 
   refresh(): void {
-    window.dispatchEvent(new CustomEvent('refreshData'));
+    this.appState.requestRefresh();
   }
 }

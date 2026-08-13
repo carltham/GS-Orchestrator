@@ -11,6 +11,7 @@ import { UnregisteredServersComponent } from './components/pages/unregistered-se
 import { HealthSimulatorComponent } from './components/pages/health-simulator/health-simulator.component';
 import { UsersPageComponent } from './components/pages/users-page/users-page.component';
 import { LoginModalComponent } from './components/modals/login-modal/login-modal.component';
+import { DialogModalComponent } from './components/modals/dialog-modal/dialog-modal.component';
 
 @Component({
   selector: 'app-root',
@@ -24,7 +25,8 @@ import { LoginModalComponent } from './components/modals/login-modal/login-modal
     UnregisteredServersComponent,
     HealthSimulatorComponent,
     UsersPageComponent,
-    LoginModalComponent
+    LoginModalComponent,
+    DialogModalComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
@@ -65,8 +67,8 @@ export class AppComponent implements OnInit {
       this.currentTab = state.activeTab;
     });
 
-    // Listen for refresh events from child components
-    window.addEventListener('refreshData', () => {
+    // Listen for refresh requests from state stream
+    this.appState.refreshRequested$.subscribe(() => {
       this.refreshData();
     });
   }

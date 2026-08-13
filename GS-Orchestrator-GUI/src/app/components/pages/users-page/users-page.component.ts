@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AppStateService, AppState } from '../../../services/app-state.service';
 import { AuthService } from '../../../services/auth.service';
+import { DialogService } from '../../../services/dialog.service';
 
 export interface UserItem {
   id: string;
@@ -38,7 +39,8 @@ export class UsersPageComponent implements OnInit {
   constructor(
     private appState: AppStateService,
     private authService: AuthService,
-    private http: HttpClient
+    private http: HttpClient,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -105,8 +107,12 @@ export class UsersPageComponent implements OnInit {
     });
   }
 
-  deleteUser(user: UserItem): void {
-    if (!confirm(`Are you sure you want to delete user "${user.username}"?`)) return;
+  async deleteUser(user: UserItem): Promise<void> {
+    const confirmed = await this.dialogService.confirm(
+      `Are you sure you want to delete user "${user.username}"?`,
+      'Delete User'
+    );
+    if (!confirmed) return;
 
     this.http.delete<any>(`/orch/admin/users/${user.id}`, {
       headers: this.authService.getAuthHeaders()

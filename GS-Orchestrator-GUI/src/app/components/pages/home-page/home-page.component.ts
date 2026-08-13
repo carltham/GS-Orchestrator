@@ -27,7 +27,6 @@ export class HomePageComponent implements OnInit {
   }
 
   refresh(): void {
-    // Will trigger parent refresh
-    window.dispatchEvent(new CustomEvent('refreshData'));
+    this.appState.requestRefresh();
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { ProjectEntry, UnregisteredServer } from '../orchestrator.service';
 
 export interface AppState {
@@ -25,7 +25,14 @@ export class AppStateService {
   private state = new BehaviorSubject<AppState>(this.initialState);
   public state$: Observable<AppState> = this.state.asObservable();
 
+  private refreshRequestSubject = new Subject<void>();
+  public refreshRequested$: Observable<void> = this.refreshRequestSubject.asObservable();
+
   constructor() {}
+
+  requestRefresh(): void {
+    this.refreshRequestSubject.next();
+  }
 
   getState(): AppState {
     return this.state.value;
