@@ -18,12 +18,13 @@ sequenceDiagram
         note over Client, Server: Phase 1: Prestart Configuration & Port Confirmation
         Dev->>Client: npm start (ProcessClient Launcher)
         Client->>Config: Read existing ports (if present)
-        Client->>Server: POST /api/register {projectName, path, serviceTypes, basePorts}
+        Client->>Client: Register with Orchestrator (POST /orch/project/register)
+        Client->>Server: POST /ps/process/heartbeat {projectName, status, pid}
         
         alt ProcessServer Offline / Unreachable
             Client->>Adapter: Invoke ProcessAdapter.js.start()
             Adapter->>LocalApp: Spawn local application processes
-            Client->>Server: Poll /api/health (3s max)
+            Client->>Server: Poll /ps/process/signals (15s interval)
         else Port Conflict with Other App
             Server->>Server: Detect port in use by other process
             Server->>Server: Allocate new non-conflicting ports

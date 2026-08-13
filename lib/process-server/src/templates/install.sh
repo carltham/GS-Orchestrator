@@ -3,7 +3,7 @@ set -e
 
 PROCESS_SERVER_URL="${PROCESS_SERVER_URL:-http://localhost:9999}"
 
-echo "[ProcessInstaller] Recursively scanning workspace for projects (up to 3 levels deep)..."
+echo "[ProcessInstaller] Installing into current project..."
 
 WORKSPACE_DIR="$(pwd)"
 
@@ -22,6 +22,12 @@ install_project() {
     PROJECT_NAME=$(basename "$TARGET_DIR")
   fi
 
+  # Skip infrastructure packages: process-client and process-server
+  if [ "$PROJECT_NAME" = "@gs/process-client" ] || [ "$PROJECT_NAME" = "@gs/process-server" ] || [ "$PROJECT_NAME" = "process-client" ] || [ "$PROJECT_NAME" = "process-server" ]; then
+    echo "[ProcessInstaller] Skipping infrastructure directory: '$PROJECT_NAME'"
+    return
+  fi
+
   echo "--------------------------------------------------"
   echo "[ProcessInstaller] Found project: '$PROJECT_NAME' in $TARGET_DIR"
 
@@ -36,24 +42,38 @@ install_project() {
 EOF
   )
 
-  local RESPONSE
-  RESPONSE=$(curl -s -X POST "$PROCESS_SERVER_URL/api/installer/generate" \
+  local ADAPTER_TMP
+  ADAPTER_TMP=$(mktemp)
+  if ! curl -fsS -X POST "$PROCESS_SERVER_URL/ps/installer/generate" \
     -H "Content-Type: application/json" \
-    -d "$PAYLOAD")
-
-  if [ -n "$RESPONSE" ]; then
-    echo "$RESPONSE" > "$TARGET_DIR/ProcessAdapter.js"
-    echo "[ProcessInstaller] ProcessAdapter.js installed -> $TARGET_DIR/ProcessAdapter.js"
-  else
-    echo "[ProcessInstaller] Warning: Failed to generate ProcessAdapter.js for $PROJECT_NAME" >&2
+    -d "$PAYLOAD" \
+    -o "$ADAPTER_TMP"; then
+    rm -f "$ADAPTER_TMP"
+    echo "[ProcessInstaller] Failed to generate ProcessAdapter.js for $PROJECT_NAME" >&2
+    return 1
   fi
+
+  if ! grep -q "class ProcessAdapter" "$ADAPTER_TMP" || ! grep -q "module.exports = ProcessAdapter" "$ADAPTER_TMP"; then
+    rm -f "$ADAPTER_TMP"
+    echo "[ProcessInstaller] Server returned an invalid ProcessAdapter.js" >&2
+    return 1
+  fi
+
+  mv "$ADAPTER_TMP" "$TARGET_DIR/ProcessAdapter.js"
+  echo "[ProcessInstaller] ProcessAdapter.js installed -> $TARGET_DIR/ProcessAdapter.js"
+
+  echo "[ProcessInstaller] Installing @gs/process-client via remote HTTP tarball package..."
+  (cd "$TARGET_DIR" && npm install --no-audit --no-fund "$PROCESS_SERVER_URL/packages/process-client.tgz")
+
+  echo "[ProcessInstaller] Saving CLIENT_INSTALLATION.md to $TARGET_DIR..."
+  curl -sSL "$PROCESS_SERVER_URL/install/instructions" > "$TARGET_DIR/CLIENT_INSTALLATION.md" || true
+  echo "--------------------------------------------------"
+  echo "📄 CLIENT INSTALLATION INSTRUCTIONS:"
+  cat "$TARGET_DIR/CLIENT_INSTALLATION.md" 2>/dev/null || true
+  echo "--------------------------------------------------"
 }
 
-# Find all directories containing package.json (excluding node_modules and .git) up to 3 levels deep
-while IFS= read -r PKG_FILE; do
-  DIR=$(dirname "$PKG_FILE")
-  install_project "$DIR"
-done < <(find "$WORKSPACE_DIR" -maxdepth 3 \( -name node_modules -o -name .git -o -name dist \) -prune -o -name "package.json" -print)
+install_project "$WORKSPACE_DIR"
 
 echo "--------------------------------------------------"
-echo "[ProcessInstaller] Recursive project discovery & installation complete."
+echo "[ProcessInstaller] Current project installation complete."

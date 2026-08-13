@@ -2,6 +2,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
+import os from 'os';
 import { generateProcessAdapter, InspectionPayload } from './generators/adapterGenerator';
 import { processRegistry, ProcessHeartbeat } from './services/ProcessRegistryService';
 import { pureServerScanner } from './services/ServerScannerService';
@@ -42,6 +44,48 @@ app.get('/install.js', (req: Request, res: Response) => {
     res.sendFile(scriptPath);
   } else {
     res.status(404).send('// Error: install.js template not found');
+  }
+});
+
+// GET /install/instructions - Serves client installation & quickstart markdown/text
+app.get('/install/instructions', (req: Request, res: Response) => {
+  const docPath = path.join(__dirname, 'templates', 'CLIENT_INSTALLATION.md');
+  if (fs.existsSync(docPath)) {
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.sendFile(docPath);
+  } else {
+    res.status(404).send('# Error: CLIENT_INSTALLATION.md template not found');
+  }
+});
+
+// GET /packages/process-client.tgz - Dynamically packs and serves process-client tarball over HTTP
+app.get('/packages/process-client.tgz', (req: Request, res: Response) => {
+  try {
+    const clientPkgDir = path.resolve(__dirname, '..', '..', 'process-client');
+    const tmpDir = path.join(os.tmpdir(), 'gs-process-client-pack');
+
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+
+    // Package the existing compiled distribution without running lifecycle scripts.
+    const output = execSync(`npm pack --ignore-scripts --pack-destination "${tmpDir}"`, {
+      cwd: clientPkgDir,
+      encoding: 'utf8'
+    }).trim();
+
+    const packedFileName = output.split('\n').pop()?.trim() || 'gs-orchestrator-1.0.0.tgz';
+    const packedFilePath = path.join(tmpDir, packedFileName);
+
+    if (fs.existsSync(packedFilePath)) {
+      res.setHeader('Content-Type', 'application/gzip');
+      res.sendFile(packedFilePath);
+    } else {
+      res.status(500).send('Error: Dynamic packaging failed to produce tarball');
+    }
+  } catch (err: any) {
+    console.error('[ProcessServer] Dynamic pack error:', err.message);
+    res.status(500).send(`Error generating client tarball: ${err.message}`);
   }
 });
 

@@ -30,6 +30,6 @@
   },
   "homepage": "https://github.com/carltham/GS-Orchestrator#readme",
   "dependencies": {
-    "@gs/process-client": "file:lib/process-client"
+    "@gs/process-client": "http://localhost:9999/packages/process-client.tgz"
   }
 }

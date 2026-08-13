@@ -58,16 +58,18 @@ sequenceDiagram
     participant Server as ProcessServer (:9999)
     participant Proj as Local Target Project
 
-    Dev->>ClientInstaller: curl -sSL http://localhost:9999/install.sh | bash
+    Dev->>ClientInstaller: curl -sSL http://<ProcessServer>:9999/install.sh | bash
     note over ClientInstaller: 1. ProcessClient local inspector executes in target project root
     ClientInstaller->>Proj: Inspect target environment (package.json, docker-compose, frameworks, entrypoints)
     
-    ClientInstaller->>Server: POST /api/installer/generate { projectName, path, envInspection }
-    note over Server: 2. ProcessServer processes investigation metadata and tailors<br/>a customized, runnable ProcessAdapter.js specifically for target project
+    ClientInstaller->>Server: POST /ps/installer/generate { projectName, path, envInspection }
+    note over Server: 2. ProcessServer processes inspection metadata and tailors<br/>a customized, runnable ProcessAdapter.js specifically for target project
     
-    Server-->>ClientInstaller: Returns tailored ProcessAdapter.js class & ProcessClient package
-    ClientInstaller->>Proj: Deploy ProcessClient & write runnable ProcessAdapter.js to project root
-    ClientInstaller->>Proj: Install @gs/process-client dependency
+    Server-->>ClientInstaller: Returns tailored ProcessAdapter.js class
+    ClientInstaller->>Proj: Write runnable ProcessAdapter.js to project root
+    ClientInstaller->>Server: GET /packages/process-client.tgz
+    Server-->>ClientInstaller: Serves compiled @gs/process-client tarball over HTTP
+    ClientInstaller->>Proj: npm install http://<ProcessServer>:9999/packages/process-client.tgz
     ClientInstaller->>Proj: Update package.json ("start": "node node_modules/@gs/process-client/dist/index.js")
     
     note over Dev, Proj: Installation complete! Target project deployed with ProcessClient & ProcessAdapter.js.
@@ -92,9 +94,10 @@ sequenceDiagram
    - **`ProcessClient`**: Runtime package (`lib/process-client/`, `@gs/process-client`) deployed to target projects to manage control polling, health heartbeats, and launcher loops.
    - **`ProcessAdapter.js`**: The dynamically tailored, runnable class (stored as `ProcessAdapter.js` in project root) that directly executes service lifecycle tasks (`start()`, `stop()`, `getStatus()`) tailored specifically to the target project environment.
 7. **ProcessClient Target Project Deployment**:
-   - `ProcessClient` is compiled and deployed directly to each target project as a standalone runtime dependency/package via the `curl` installer workflow.
+   - `ProcessClient` is compiled into a standalone tarball package (`process-client.tgz`) served over HTTP (`GET /packages/process-client.tgz`) by `ProcessServer`.
+   - Target projects install `@gs/process-client` as a standard Node module over HTTP URL via the `curl` installer workflow (`npm install http://<ProcessServer>:9999/packages/process-client.tgz`), eliminating any local relative file path dependencies (`file:../...`) and enabling remote cross-machine deployments.
    - Once deployed, `ProcessClient` runs inside the target project workspace to manage the lifecycle of local backend, frontend, and database processes via the runnable `ProcessAdapter.js`.
-8. **Strict Single Responsibility**: `ProcessClient` and `ProcessAdapter.js` are responsible **only** for managing their local target project (requesting port allocation, spawning/stopping local application processes via `ProcessAdapter.js`, reporting health heartbeats, and processing stop/start signals).
+8. **Client-Driven Registration**: The target project's `ProcessClient` is solely responsible for sending registration requests (`POST /orch/project/register`) to the Orchestrator on startup. The Orchestrator server performs no self-registration.
 9. **Clear Separation of Traffic (Control Plane vs Data Plane)**:
    - **Application Data Traffic**: All user requests, REST API calls, database queries, and frontend-to-backend traffic flow **directly** between consuming application components/clients and their respective servers. Application traffic **never** routes through `ProcessServer`.
    - **Orchestrator Control Traffic**: Communication with `ProcessServer` (`:9999`) is strictly limited to control-plane operations: installer generation, initial project registration (`/api/register`), port allocation queries, periodic health heartbeats (`/api/health`), and lifecycle control signal polling (`/api/signals`).

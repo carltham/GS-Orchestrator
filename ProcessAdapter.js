@@ -1,6 +1,6 @@
 /**
  * ProcessAdapter.js
- * Generated dynamically by ProcessServer on 2026-08-11T07:38:08.959Z
+ * Generated dynamically by ProcessServer on 2026-08-13T14:06:43.885Z
  * Target Project: gs-orchestrator
  */
 
@@ -13,6 +13,31 @@ class ProcessAdapter {
     this.projectName = "gs-orchestrator";
     this.processes = {};
     this.status = 'STOPPED';
+    this.logDir = path.resolve(process.cwd(), 'logs');
+    this.logFilePath = path.join(this.logDir, 'process-adapter.log');
+    this.ensureLogDirectory();
+  }
+
+  ensureLogDirectory() {
+    try {
+      if (!fs.existsSync(this.logDir)) {
+        fs.mkdirSync(this.logDir, { recursive: true });
+      }
+    } catch (err) {
+      console.error(`[ProcessAdapter] Failed to create log directory: ${err.message}`);
+    }
+  }
+
+  log(message, level = 'INFO') {
+    const timestamp = new Date().toISOString();
+    const formatted = `[${timestamp}] [${level}] [ProcessAdapter:${this.projectName}] ${message}\n`;
+    console.log(`[ProcessAdapter] ${message}`);
+    try {
+      this.ensureLogDirectory();
+      fs.appendFileSync(this.logFilePath, formatted, 'utf8');
+    } catch (err) {
+      console.error(`[ProcessAdapter] Log write failed: ${err.message}`);
+    }
   }
 
   /**
@@ -21,11 +46,11 @@ class ProcessAdapter {
    */
   async start(ports = {}) {
     if (this.status === 'RUNNING') {
-      console.log(`[ProcessAdapter] ${this.projectName} is already running.`);
+      this.log(`${this.projectName} is already running.`, 'WARN');
       return;
     }
 
-    console.log(`[ProcessAdapter] Starting component services for ${this.projectName}...`);
+    this.log(`Starting component services for ${this.projectName}...`);
     const env = { ...process.env, ...ports };
 
     if (fs.existsSync(path.join(__dirname, 'GS-Orchestrator', 'package.json'))) {
@@ -41,7 +66,7 @@ class ProcessAdapter {
    * Component Launcher: GS-Orchestrator Backend Server
    */
   async startOrchestratorServer(env = {}) {
-    console.log('[ProcessAdapter] Launching component: GS-Orchestrator Server...');
+    this.log('Launching component: GS-Orchestrator Server...');
     const proc = spawn('npm', ['--prefix', 'GS-Orchestrator', 'run', 'dev'], {
       cwd: __dirname,
       env,
@@ -57,7 +82,7 @@ class ProcessAdapter {
    * Component Launcher: Standard Node.js Application
    */
   async startNodeComponent(env = {}) {
-    console.log(`[ProcessAdapter] Launching component: ${this.projectName}...`);
+    this.log(`Launching component: ${this.projectName}...`);
     const proc = spawn('npm', ['run', 'dev'], {
       cwd: __dirname,
       env,
@@ -74,7 +99,7 @@ class ProcessAdapter {
    */
   bindProcessEvents(name, proc) {
     proc.on('exit', (code, signal) => {
-      console.log(`[ProcessAdapter] Component '${name}' exited with code ${code}, signal ${signal}`);
+      this.log(`Component '${name}' exited with code ${code}, signal ${signal}`);
       delete this.processes[name];
       if (Object.keys(this.processes).length === 0) {
         this.status = 'STOPPED';
@@ -82,7 +107,7 @@ class ProcessAdapter {
     });
 
     proc.on('error', (err) => {
-      console.error(`[ProcessAdapter] Component '${name}' process error: ${err.message}`);
+      this.log(`Component '${name}' process error: ${err.message}`, 'ERROR');
       this.status = 'ERROR';
     });
   }
@@ -91,10 +116,10 @@ class ProcessAdapter {
    * Stop all component services
    */
   async stop() {
-    console.log(`[ProcessAdapter] Stopping all components for ${this.projectName}...`);
+    this.log(`Stopping all components for ${this.projectName}...`);
     for (const [name, proc] of Object.entries(this.processes)) {
       if (proc) {
-        console.log(`[ProcessAdapter] Killing component process: ${name}`);
+        this.log(`Killing component process: ${name}`);
         proc.kill('SIGTERM');
       }
     }

@@ -14,3 +14,5 @@ playwright-report/
 testing/playwright/test-results/
 testing/playwright/playwright-report/
 testing/temp-apps/
+*.tgz
+*.tar.gz
