@@ -1,7 +1,7 @@
 # GS-Orchestrator Implementation Progress
 
-**Implemented:** `[████████████████████]` 100% (9/9 Tasks Implemented)  
-**Verified:**    `[████████████████████]` 100% (11/11 Playwright E2E Tests Passed)
+**Implemented:** `[██████████████-------]` 70% (12/17 Tasks Implemented)  
+**Verified:**    `[██████████████-------]` 70% (11/17 Playwright E2E Tests Passed)
 
 ---
 
@@ -31,11 +31,15 @@ All 11 tests across API and UI suites **PASSED**:
 - [ ] **Phase 3 Task 7**: `GS-Orchestrator` port 10000 + static GUI hosting
 - [ ] **Phase 3 Task 8**: Integrate `ProcessAdapter.js` into `GS-Orchestrator`
 - [ ] **Phase 4 Task 9**: Playwright E2E verification
+- [ ] **Phase 5 Task 13**: Scaffold Process-Server MVC & Models
+- [ ] **Phase 5 Task 14**: Process-Server Express Routing & Controllers Migration
+- [ ] **Phase 5 Task 15**: Refactor Process-Client to MVC Style
 
 ---
 
-## ⏳ To Do (Incomplete Implementation)
-*(None. All 9 tasks are implemented and verified by automated Playwright tests.)*
+## ⏳ To Do (Incomplete Implementation / Phase 5 MVC)
+- [ ] **Phase 5 Task 16**: Align GS-Orchestrator to Remote Process-Server Registry
+- [ ] **Phase 5 Task 17**: Full Core Verification & Automated Tests Verification
 
 ---
 

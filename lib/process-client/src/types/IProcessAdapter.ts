@@ -2,6 +2,7 @@ export interface IProcessStatus {
   projectName: string;
   status: 'STOPPED' | 'RUNNING' | 'ERROR';
   pid?: number | null;
+  components?: Record<string, number | null>;
 }
 
 export interface IProcessAdapter {

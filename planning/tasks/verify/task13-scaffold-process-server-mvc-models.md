@@ -7,11 +7,11 @@ Set up the structural MVC directories and core Model components under `lib/proce
 3. `ProcessRegistry.ts` model updated to follow strict OOP and house signal queues / in-memory heartbeats.
 
 ## Completion Criteria
-- [ ] Directory structures `lib/process-server/src/models`, `lib/process-server/src/controllers`, and `lib/process-server/src/routes` are created.
-- [ ] `ProjectRegistry.ts` can read, register, and update project metadata.
-- [ ] No compilation errors when testing directory scaffolding.
+- [x] Directory structures `lib/process-server/src/models`, `lib/process-server/src/controllers`, and `lib/process-server/src/routes` are created.
+- [x] `ProjectRegistry.ts` can read, register, and update project metadata.
+- [x] No compilation errors when testing directory scaffolding.
 
 ---
 
 # Verification Steps
-Evaluate folder contents or compile.
+Verified. All models scaffolded and proxy links aligned.

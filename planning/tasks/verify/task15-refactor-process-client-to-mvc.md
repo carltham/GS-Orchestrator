@@ -13,11 +13,11 @@ Refactor the `@gs/process-client` daemon library to strictly follow MVC principl
    - `HeartbeatController.ts` for registering the local project profile and firing off heartbeats strictly to `:9999` once up & healthy.
 
 ## Completion Criteria
-- [ ] No more direct network references or communication loops directed to port `:10000` (`GS-Orchestrator`) inside `@gs/process-client`.
-- [ ] Client registration flows strictly to `:9999` `POST /ps/project/register` on healthy component detection.
-- [ ] `@gs/process-client` is build-green.
+- [x] No more direct network references or communication loops directed to port `:10000` (`GS-Orchestrator`) inside `@gs/process-client`.
+- [x] Client registration flows strictly to `:9999` `POST /ps/project/register` on healthy component detection.
+- [x] `@gs/process-client` is build-green.
 
 ---
 
 # Verification Steps
-`npm --prefix lib/process-client run build` completes successfully.
+`npm --prefix lib/process-client run build` completes successfully. Passed.
