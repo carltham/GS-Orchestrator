@@ -99,7 +99,7 @@
     "GUI-Simulated-Combo-App": {
       "name": "GUI-Simulated-Combo-App",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/dynamic-combo-app",
-      "registeredAt": "2026-08-13T12:49:35.837Z",
+      "registeredAt": "2026-08-13T13:01:17.972Z",
       "components": {
         "backend::node-ts": 3002,
         "frontend::angular": 9006
@@ -109,5 +109,5 @@
     }
   },
   "nextPortBase": 4200,
-  "lastUpdated": "2026-08-13T12:49:35.931Z"
+  "lastUpdated": "2026-08-13T13:01:18.005Z"
 }

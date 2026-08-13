@@ -9,13 +9,11 @@ import { RegistryService } from './services/RegistryService';
 import { ServerScannerService } from './services/ServerScannerService';
 import { PortAllocatorService } from './services/PortAllocatorService';
 import { UserService } from './services/UserService';
-import { detectOwnProjectName } from './utils/selfDetector';
 import { showBanner } from './utils/banner';
 import { prepareCors, prepareRoutes, prepareStaticAssets } from './app';
 
 const app: Express = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
-const SELF_PROJECT_NAME = detectOwnProjectName();
 
 // Persistence Paths
 const registryPath = path.join(__dirname, '..', '..', 'db', 'registry.json');
@@ -31,7 +29,7 @@ const userService = new UserService(usersPath);
 // Configure the container / express app controller middleware
 prepareCors(app);
 app.use(express.json());
-prepareRoutes(app, userService, registry, PORT, portAllocator, serverScanner, SELF_PROJECT_NAME);
+prepareRoutes(app, userService, registry, PORT, portAllocator, serverScanner, 'GS-Orchestrator');
 prepareStaticAssets(app);
 
 // Server Spawning & Active Port Listen
@@ -55,4 +53,4 @@ if (require.main === module) {
 }
 
 // Exportable instance bindings (preserved exports for tests/consumers)
-export { app, registry, serverScanner, portAllocator, userService, SELF_PROJECT_NAME };
+export { app, registry, serverScanner, portAllocator, userService };

@@ -6,6 +6,7 @@ import { IProcessAdapter } from '../types/IProcessAdapter';
 export interface ProcessClientConfig {
   projectName: string;
   processServerUrl?: string;
+  orchestratorUrl?: string;
   pollIntervalMs?: number;
   heartbeatIntervalMs?: number;
   adapter?: IProcessAdapter;
@@ -14,6 +15,7 @@ export interface ProcessClientConfig {
 export class ProcessClient {
   private projectName: string;
   private processServerUrl: string;
+  private orchestratorUrl: string;
   private pollIntervalMs: number;
   private heartbeatIntervalMs: number;
   private adapter: IProcessAdapter | null = null;
@@ -26,6 +28,7 @@ export class ProcessClient {
   constructor(config: ProcessClientConfig) {
     this.projectName = config.projectName;
     this.processServerUrl = config.processServerUrl || process.env.PROCESS_SERVER_URL || 'http://localhost:9999';
+    this.orchestratorUrl = config.orchestratorUrl || process.env.ORCHESTRATOR_URL || 'http://localhost:10000';
     
     // Attempt to load operator-set constants from static git-level configuration files
     let filePollIntervalMs: number | undefined;
@@ -98,6 +101,9 @@ export class ProcessClient {
 
     this.log(`Started process client polling against ${this.processServerUrl}`);
 
+    // Client-driven registration with Orchestrator Server
+    await this.registerWithOrchestrator();
+
     // Automatically trigger local process startup via adapter on client launch
     if (this.adapter) {
       this.log(`Launching target process via ProcessAdapter...`);
@@ -157,6 +163,31 @@ export class ProcessClient {
         clearInterval(this.heartbeatTimer);
       }
       this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
+    }
+  }
+
+  private async registerWithOrchestrator(): Promise<void> {
+    try {
+      const payload = {
+        projectName: this.projectName,
+        path: process.cwd(),
+        serviceTypes: { backend: 'node-ts', frontend: 'angular' }
+      };
+
+      const res = await fetch(`${this.orchestratorUrl}/orch/project/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json() as any;
+        this.log(`Registered successfully with Orchestrator (${this.orchestratorUrl}). Allocated ports: ${JSON.stringify(data.ports)}`);
+      } else {
+        this.log(`Registration with Orchestrator returned status: ${res.status}`, 'WARN');
+      }
+    } catch (err: any) {
+      this.log(`Registration with Orchestrator failed: ${err.message}`, 'WARN');
     }
   }
 
