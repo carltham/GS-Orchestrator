@@ -57,9 +57,9 @@ describe('GS-Orchestrator Server SFT - Project Registration & Port Allocation', 
     // Check disk persistence
     const saved = registry.getProject('TestApp');
     expect(saved).toBeDefined();
-    expect(saved?.components['backend::node-ts']).toBe(3000);
-    expect(saved?.components['frontend::vite']).toBe(5173);
-    expect(saved?.components['database::postgres']).toBe(5433);
+    expect(saved?.components['backend::node-ts'].port).toBe(3000);
+    expect(saved?.components['frontend::vite'].port).toBe(5173);
+    expect(saved?.components['database::postgres'].port).toBe(5433);
   });
 
   test('self-registers GS-Orchestrator assigning fixed ports 10000 for backend and frontend', async () => {
@@ -73,8 +73,8 @@ describe('GS-Orchestrator Server SFT - Project Registration & Port Allocation', 
     expect(res.status).toBe(201);
     expect(res.body.ports.backend).toBe(10000);
     expect(res.body.ports.frontend).toBe(10000);
-    expect(res.body.components['backend::node-ts']).toBe(10000);
-    expect(res.body.components['frontend::angular']).toBe(10000);
+    expect(res.body.components['backend::node-ts'].port).toBe(10000);
+    expect(res.body.components['frontend::angular'].port).toBe(10000);
   });
 
   test('idempotency: returning existing registration for already registered project', async () => {

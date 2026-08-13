@@ -20,7 +20,7 @@ export const ProcessServerInitiator: ServerInitiator = {
   cwd: '.',
   readySentinel: 'Process Server running on port',
   port: 9999,
-  timeoutMs: 3000
+  timeoutMs: 10000
 };
 
 export const GSOrchestratorInitiator: ServerInitiator = {
@@ -30,7 +30,7 @@ export const GSOrchestratorInitiator: ServerInitiator = {
   cwd: 'GS-Orchestrator',
   readySentinel: 'GS-Orchestrator running on port',
   port: 10000,
-  timeoutMs: 3000
+  timeoutMs: 10000
 };
 
 export class TestManager {

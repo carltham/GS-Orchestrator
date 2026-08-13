@@ -160,10 +160,11 @@ export function createRegistrationRoutes(
         });
       }
 
+      const hasExplicitServiceTypes = req.body.serviceTypes !== undefined;
       const serviceTypes: Record<string, string> = req.body.serviceTypes || {};
       const basePorts: Record<string, number> = req.body.basePorts || {};
 
-      if (Object.keys(serviceTypes).length === 0) {
+      if (!hasExplicitServiceTypes) {
         if (req.body.backendType) serviceTypes.backend = req.body.backendType;
         if (req.body.frontendType) serviceTypes.frontend = req.body.frontendType;
         if (req.body.databaseType) serviceTypes.database = req.body.databaseType;

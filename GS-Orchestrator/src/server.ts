@@ -14,6 +14,7 @@ import { prepareCors, prepareRoutes, prepareStaticAssets } from './app';
 
 const app: Express = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
+export const SELF_PROJECT_NAME = 'GS-Orchestrator';
 
 // Persistence Paths
 const registryPath = path.join(__dirname, '..', '..', 'db', 'registry.json');
@@ -29,7 +30,7 @@ const userService = new UserService(usersPath);
 // Configure the container / express app controller middleware
 prepareCors(app);
 app.use(express.json());
-prepareRoutes(app, userService, registry, PORT, portAllocator, serverScanner, 'GS-Orchestrator');
+prepareRoutes(app, userService, registry, PORT, portAllocator, serverScanner, SELF_PROJECT_NAME);
 prepareStaticAssets(app);
 
 // Server Spawning & Active Port Listen
