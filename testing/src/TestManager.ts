@@ -113,7 +113,7 @@ export class TestManager {
   }
 
   private async startServer(initiator: ServerInitiator): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const runCwd = path.isAbsolute(initiator.cwd)
         ? initiator.cwd
         : path.join(this.workspaceRoot, initiator.cwd);
@@ -121,31 +121,50 @@ export class TestManager {
       const proc = spawn(initiator.command, initiator.args, {
         cwd: runCwd,
         stdio: 'pipe',
-        shell: true
+        detached: process.platform !== 'win32'
       });
 
       this.processes[initiator.name] = proc;
+      let settled = false;
+
+      const finish = (error?: Error): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        error ? reject(error) : resolve();
+      };
+
+      const checkPort = async (): Promise<void> => {
+        if (settled) return;
+        if (await this.isPortOccupied(initiator.port)) {
+          console.log(`[TestManager] Server "${initiator.name}" is accepting connections on port ${initiator.port}.`);
+          finish();
+          return;
+        }
+        setTimeout(checkPort, 100);
+      };
 
       // Pipe output safely so we can check startup sentence patterns
       proc.stdout?.on('data', (data) => {
         const output = data.toString();
         // Mirror logs to console so we can trace startup issues
         process.stdout.write(`[Initiator][${initiator.name}] ${output}`);
-        if (output.includes(initiator.readySentinel) || output.toLowerCase().includes('listening on port')) {
-          console.log(`[TestManager] Server "${initiator.name}" ready sentinel detected.`);
-          resolve();
-        }
       });
 
       proc.stderr?.on('data', (data) => {
         process.stderr.write(`[Initiator][${initiator.name}] ERROR: ${data.toString()}`);
       });
 
-      // Timeout fallback safeguard
-      setTimeout(() => {
-        console.log(`[TestManager] Warning: Server "${initiator.name}" startup ready sentinel check timed out. Proceeding.`);
-        resolve();
+      proc.once('error', (error) => finish(error));
+      proc.once('exit', (code) => {
+        finish(new Error(`Server "${initiator.name}" exited before port ${initiator.port} was ready (code ${code ?? 'unknown'}).`));
+      });
+
+      const timeout = setTimeout(() => {
+        finish(new Error(`Server "${initiator.name}" did not open port ${initiator.port} within ${initiator.timeoutMs ?? 3000}ms.`));
       }, initiator.timeoutMs ?? 3000);
+
+      void checkPort();
     });
   }
 
@@ -175,8 +194,15 @@ export class TestManager {
     for (const [name, proc] of Object.entries(this.processes)) {
       if (proc) {
         console.log(`[TestManager] Stopping service process: ${name}`);
-        // On Linux/Unix, use kill process signals safely
-        proc.kill('SIGTERM');
+        try {
+          if (process.platform === 'win32') {
+            proc.kill('SIGTERM');
+          } else {
+            process.kill(-proc.pid!, 'SIGTERM');
+          }
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+        }
       }
     }
     this.processes = {};

@@ -95,8 +95,19 @@
       },
       "status": "stopped",
       "ticket": "ticket-1786611921753-f6318a86"
+    },
+    "GUI-Simulated-Combo-App": {
+      "name": "GUI-Simulated-Combo-App",
+      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/dynamic-combo-app",
+      "registeredAt": "2026-08-13T12:31:59.406Z",
+      "components": {
+        "backend::node-ts": 3002,
+        "frontend::angular": 9006
+      },
+      "status": "stopped",
+      "ticket": "ticket-1786623567479-8b7950b8"
     }
   },
   "nextPortBase": 4200,
-  "lastUpdated": "2026-08-13T09:05:42.277Z"
+  "lastUpdated": "2026-08-13T12:31:59.511Z"
 }

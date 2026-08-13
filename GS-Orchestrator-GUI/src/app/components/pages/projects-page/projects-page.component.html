@@ -26,9 +26,9 @@
                 'badge-warning': p.status === 'partially' || p.status === 'starting' || p.status === 'stop',
                 'badge-degraded': p.status === 'stopping' || p.status === 'stopped'
               }"
-              (click)="!p.status || p.status === 'running' || p.status === 'partially' ? openStateModal(p) : null"
-              [style.cursor]="!p.status || p.status === 'running' || p.status === 'partially' ? 'pointer' : 'default'"
-              [title]="!p.status || p.status === 'running' || p.status === 'partially' ? 'Click to change state' : 'Project is transitioning'">
+1              (click)="!p.status || p.status === 'running' || p.status === 'partially' || p.status === 'stopped' ? openStateModal(p) : null"
+              [style.cursor]="!p.status || p.status === 'running' || p.status === 'partially' || p.status === 'stopped' ? 'pointer' : 'default'"
+              [title]="!p.status || p.status === 'running' || p.status === 'partially' || p.status === 'stopped' ? 'Click to change state' : 'Project is transitioning'">
               {{ p.status || 'running' }}
             </span>
           </td>

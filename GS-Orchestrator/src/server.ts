@@ -18,31 +18,15 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
 const SELF_PROJECT_NAME = detectOwnProjectName();
 
 // Persistence Paths
-let registryPath: string;
-let unregisteredPath: string;
-let usersPath: string;
+const registryPath = path.join(__dirname, '..', '..', 'db', 'registry.json');
+const unregisteredPath = path.join(__dirname, '..', '..', 'db', 'unregistered-servers.json');
+const usersPath = path.join(__dirname, '..', '..', 'db', 'users.json');
 
 // Core Domain Services (Singletons)
-let registry: RegistryService;
-let serverScanner: ServerScannerService;
-let portAllocator: PortAllocatorService;
-let userService: UserService;
-
-function init(): void {
-  // Setup persistence JSON directory links
-  registryPath = path.join(__dirname, '..', '..', 'db', 'registry.json');
-  unregisteredPath = path.join(__dirname, '..', '..', 'db', 'unregistered-servers.json');
-  usersPath = path.join(__dirname, '..', '..', 'db', 'users.json');
-
-  // Load backend domain singletons
-  registry = new RegistryService(registryPath);
-  serverScanner = new ServerScannerService(unregisteredPath, registry);
-  portAllocator = new PortAllocatorService(registry, serverScanner);
-  userService = new UserService(usersPath);
-}
-
-// Trigger initialization
-init();
+const registry = new RegistryService(registryPath);
+const serverScanner = new ServerScannerService(unregisteredPath, registry);
+const portAllocator = new PortAllocatorService(registry, serverScanner);
+const userService = new UserService(usersPath);
 
 // Configure the container / express app controller middleware
 prepareCors(app);
