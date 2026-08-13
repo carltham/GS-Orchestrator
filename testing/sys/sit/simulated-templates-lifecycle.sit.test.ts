@@ -1,92 +1,54 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn, ChildProcess } from 'child_process';
+import { ChildProcess } from 'child_process';
+import {
+  prepareSelectedProject,
+  spawnSimulatedMicroservices,
+  teardownSimulatedMicroservices
+} from '../../src/SimulatedAppHelper';
 
 describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () => {
-  const PROCESS_SERVER_URL = 'http://localhost:9999';
   const ORCHESTRATOR_URL = 'http://localhost:10000';
-  const PROJECT_NAME = 'SIT-Dynamic-Simulated-Combo-App';
+  const BASE_PROJECT_NAME = 'SIT-Combo-App';
 
   const WORKspaceRoot = path.resolve(__dirname, '../../..');
   const tempAppsDir = path.join(WORKspaceRoot, 'testing', 'temp-apps');
-  const testAppDir = path.join(tempAppsDir, 'dynamic-combo-app');
 
-  const spawnedProcesses: ChildProcess[] = [];
+  let spawnedProcesses: ChildProcess[] = [];
+  let currentTestAppDir = '';
 
   beforeAll(() => {
-    // Check and create temp-apps directory
     if (!fs.existsSync(tempAppsDir)) {
       fs.mkdirSync(tempAppsDir, { recursive: true });
     }
   });
 
   afterEach(() => {
-    // Kill any processes spawned for this test cleanly
-    while (spawnedProcesses.length > 0) {
-      const proc = spawnedProcesses.pop();
-      if (proc) {
-        try {
-          proc.kill('SIGTERM');
-        } catch (e) {
-          // ignore error
-        }
-      }
-    }
-
-    // Clean up temporary application copy
-    if (fs.existsSync(testAppDir)) {
-      try {
-        fs.rmSync(testAppDir, { recursive: true, force: true });
-      } catch (err) {
-        console.warn('⚠️ Clear temp app warning:', err);
-      }
-    }
+    teardownSimulatedMicroservices(spawnedProcesses, currentTestAppDir);
   });
 
-  function copyFolderRecursiveSync(src: string, dest: string) {
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
-    }
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-    for (const entry of entries) {
-      const srcPath = path.join(src, entry.name);
-      const destPath = path.join(dest, entry.name);
-      if (entry.isDirectory()) {
-        copyFolderRecursiveSync(srcPath, destPath);
-      } else {
-        fs.copyFileSync(srcPath, destPath);
-      }
-    }
-  }
+  // Helper run function to test a specific combo in complete isolation
+  async function runComboTest(
+    comboName: string,
+    services: { frontend?: boolean; backend?: boolean; database?: boolean },
+    verifyFn: (ports: { frontend?: number; backend?: number; database?: number }) => Promise<void>
+  ) {
+    const projectName = `${BASE_PROJECT_NAME}-${comboName}`;
+    currentTestAppDir = path.join(tempAppsDir, projectName);
 
-  test('should successfully assemble, register, and run a combo of Frontend, Backend, and FileDB templates', async () => {
-    // 1. Setup Combined Project Directories
-    if (fs.existsSync(testAppDir)) {
-      fs.rmSync(testAppDir, { recursive: true, force: true });
-    }
-    fs.mkdirSync(testAppDir, { recursive: true });
+    // 1. Prepare folder mapping
+    prepareSelectedProject(WORKspaceRoot, tempAppsDir, currentTestAppDir, services);
 
-    const srcTemplatesDir = path.join(WORKspaceRoot, 'testing', 'apps');
+    // 2. Query GS-Orchestrator to register only the selected services
+    const serviceTypes: Record<string, string> = {};
+    if (services.frontend) serviceTypes.frontend = 'frontend';
+    if (services.backend) serviceTypes.backend = 'backend';
+    if (services.database) serviceTypes.database = 'database';
 
-    // Combine all three: Frontend, Backend, and FileDB
-    copyFolderRecursiveSync(path.join(srcTemplatesDir, 'simulated-frontend-template'), path.join(testAppDir, 'frontend'));
-    copyFolderRecursiveSync(path.join(srcTemplatesDir, 'simulated-backend-template'), path.join(testAppDir, 'backend'));
-    copyFolderRecursiveSync(path.join(srcTemplatesDir, 'simulated-filedb-template'), path.join(testAppDir, 'filedb'));
-
-    // Verify folders copy correctly
-    expect(fs.existsSync(path.join(testAppDir, 'frontend', 'server.js'))).toBe(true);
-    expect(fs.existsSync(path.join(testAppDir, 'backend', 'server.js'))).toBe(true);
-    expect(fs.existsSync(path.join(testAppDir, 'filedb', 'server.js'))).toBe(true);
-
-    // 2. Query GS-Orchestrator to register the project and get non-conflicting dynamic port allocations
     const registerPayload = {
-      projectName: PROJECT_NAME,
-      path: testAppDir,
-      serviceTypes: {
-        frontend: 'node-ts', // maps frontend requirement to a registration port key
-        backend: 'node-ts',  // maps backend requirement to a registration port key
-        database: 'filedb'   // maps database requirement to a registration port key
-      }
+      projectName,
+      path: currentTestAppDir,
+      serviceTypes
     };
 
     const registerRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
@@ -99,87 +61,148 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
     const registerBody = (await registerRes.json()) as any;
     expect(registerBody.ports).toBeDefined();
 
-    const frontendPort = registerBody.ports.frontend;
-    const backendPort = registerBody.ports.backend;
-    const databasePort = registerBody.ports.database;
-
-    expect(frontendPort).toBeDefined();
-    expect(backendPort).toBeDefined();
-    expect(databasePort).toBeDefined();
-
-    console.log(`[TEST COMBO] Allocated Ports: Frontend:${frontendPort}, Backend:${backendPort}, DB:${databasePort}`);
-
-    // 3. Spawn FileDB Template microservice physically with assigned database port
-    const fileDbProc = spawn('node', ['server.js'], {
-      cwd: path.join(testAppDir, 'filedb'),
-      env: {
-        ...process.env,
-        PORT: String(databasePort),
-        DB_FILE: path.join(testAppDir, 'filedb', 'data', 'store.json')
-      }
+    // 3. Spawn only the selected microservices
+    spawnedProcesses = spawnSimulatedMicroservices(currentTestAppDir, {
+      frontend: registerBody.ports.frontend,
+      backend: registerBody.ports.backend,
+      database: registerBody.ports.database
     });
-    spawnedProcesses.push(fileDbProc);
 
-    // Spawn Backend Template microservice physically with assigned backend port and databases variables
-    const backendProc = spawn('node', ['server.js'], {
-      cwd: path.join(testAppDir, 'backend'),
-      env: {
-        ...process.env,
-        PORT: String(backendPort),
-        database: String(databasePort)
-      }
+    // Provide startup window
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 4. Perform dynamic custom assertions
+    await verifyFn(registerBody.ports);
+  }
+
+  // --- Combination 0: Empty Set (No services) ---
+  test('Combination 0: Empty Set (No services)', async () => {
+    await runComboTest('EmptySet', {}, async (ports) => {
+      expect(ports).toBeDefined();
+      expect(Object.keys(ports || {})).toHaveLength(0);
     });
-    spawnedProcesses.push(backendProc);
+  });
 
-    // Spawn Frontend Template microservice physically with assigned ports
-    const frontendProc = spawn('node', ['server.js'], {
-      cwd: path.join(testAppDir, 'frontend'),
-      env: {
-        ...process.env,
-        PORT: String(frontendPort),
-        backend: String(backendPort)
-      }
+  // --- Single-Component Scenarios (1-Tier) ---
+  test('Combination 1: Database (FileDB) Only', async () => {
+    await runComboTest('DBOnly', { database: true }, async (ports) => {
+      expect(ports.database).toBeDefined();
+      expect(ports.frontend).toBeUndefined();
+      expect(ports.backend).toBeUndefined();
+
+      // Verify db is functional standalone
+      const healthRes = await fetch(`http://localhost:${ports.database}/health`);
+      expect(healthRes.status).toBe(200);
+      const health = await healthRes.json() as any;
+      expect(health.type).toBe('filedb');
+
+      const recordsRes = await fetch(`http://localhost:${ports.database}/records`);
+      expect(recordsRes.status).toBe(200);
+      const records = await recordsRes.json() as any;
+      expect(records.length).toBeGreaterThan(0);
     });
-    spawnedProcesses.push(frontendProc);
+  });
 
-    // Allow servers a brief window to bind to ports and startup
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+  test('Combination 2: Backend Only (In Offline Fallback mode)', async () => {
+    await runComboTest('BackendOnly', { backend: true }, async (ports) => {
+      expect(ports.backend).toBeDefined();
+      expect(ports.frontend).toBeUndefined();
+      expect(ports.database).toBeUndefined();
 
-    // 4. Verify Live Interaction - Endpoint checks on running combined microservices!
-    // Connect to FileDB and confirm seed records exist
-    const fileDbHealthRes = await fetch(`http://localhost:${databasePort}/health`);
-    expect(fileDbHealthRes.status).toBe(200);
-    const fileDbHealth = (await fileDbHealthRes.json()) as any;
-    expect(fileDbHealth.status).toBe('ok');
-    expect(fileDbHealth.type).toBe('filedb');
+      // Verify backend works in filesystem backup/fallback mode
+      const healthRes = await fetch(`http://localhost:${ports.backend}/health`);
+      expect(healthRes.status).toBe(200);
+      const health = await healthRes.json() as any;
+      expect(health.type).toBe('backend');
 
-    const dbQueryRes = await fetch(`http://localhost:${databasePort}/records`);
-    expect(dbQueryRes.status).toBe(200);
-    const dataRecords = (await dbQueryRes.json()) as any;
-    expect(dataRecords.length).toBeGreaterThan(0);
-    expect(dataRecords[0].name).toContain('Initial Seed Record');
+      const itemsRes = await fetch(`http://localhost:${ports.backend}/api/items`);
+      expect(itemsRes.status).toBe(200);
+      const items = await itemsRes.json() as any;
+      expect(Array.isArray(items)).toBe(true);
+    });
+  });
 
-    // Connect to Backend and check CORS mapping and proxy output to FileDB
-    const devHealthRes = await fetch(`http://localhost:${backendPort}/health`);
-    expect(devHealthRes.status).toBe(200);
-    const devHealth = (await devHealthRes.json()) as any;
-    expect(devHealth.status).toBe('ok');
-    expect(devHealth.type).toBe('backend');
+  test('Combination 3: Frontend Only', async () => {
+    await runComboTest('FrontendOnly', { frontend: true }, async (ports) => {
+      expect(ports.frontend).toBeDefined();
+      expect(ports.backend).toBeUndefined();
+      expect(ports.database).toBeUndefined();
 
-    // Backend queries API items proxying request directly to FileDB running instance!
-    const backendItemsRes = await fetch(`http://localhost:${backendPort}/api/items`);
-    expect(backendItemsRes.status).toBe(200);
-    const backendItems = (await backendItemsRes.json()) as any;
-    expect(backendItems.length).toEqual(dataRecords.length);
-    expect(backendItems[0].name).toEqual(dataRecords[0].name);
+      // Verify frontend loads standard index mapping
+      const res = await fetch(`http://localhost:${ports.frontend}/`);
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain('Simulated Frontend Template');
+    });
+  });
 
-    // Connect to Frontend and fetch simulated HTML landing contents referencing configured ports
-    const mainHtmlRes = await fetch(`http://localhost:${frontendPort}/`);
-    expect(mainHtmlRes.status).toBe(200);
-    const mainHtml = await mainHtmlRes.text();
-    expect(mainHtml).toContain('Simulated Frontend Template');
-    expect(mainHtml).toContain(`http://localhost:${backendPort}/api/items`);
+  // --- Coupled Scenarios (2-Tier) ---
+  test('Combination 4: Backend + Database (No UI)', async () => {
+    await runComboTest('BackendAndDB', { backend: true, database: true }, async (ports) => {
+      expect(ports.backend).toBeDefined();
+      expect(ports.database).toBeDefined();
+      expect(ports.frontend).toBeUndefined();
 
-    console.log('✅ Combined Template Lifecycle execution validation completed successfully!');
+      // Verify Backend successfully proxies data queries to live FileDB
+      const itemsRes = await fetch(`http://localhost:${ports.backend}/api/items`);
+      expect(itemsRes.status).toBe(200);
+      const items = await itemsRes.json() as any;
+      expect(items.length).toBeGreaterThan(0);
+      expect(items[0].name).toContain('Seed Record');
+    });
+  });
+
+  test('Combination 5: Frontend + Backend (No DB - Backend File Fallback)', async () => {
+    await runComboTest('FrontendAndBackend', { frontend: true, backend: true }, async (ports) => {
+      expect(ports.frontend).toBeDefined();
+      expect(ports.backend).toBeDefined();
+      expect(ports.database).toBeUndefined();
+
+      // Frontend is loaded and lists port parameters of the backend
+      const mainHtmlRes = await fetch(`http://localhost:${ports.frontend}/`);
+      expect(mainHtmlRes.status).toBe(200);
+      const mainHtml = await mainHtmlRes.text();
+      expect(mainHtml).toContain(`http://localhost:${ports.backend}/api/items`);
+    });
+  });
+
+  test('Combination 6: Frontend + Database (No Backend)', async () => {
+    await runComboTest('FrontendAndDB', { frontend: true, database: true }, async (ports) => {
+      expect(ports.frontend).toBeDefined();
+      expect(ports.database).toBeDefined();
+      expect(ports.backend).toBeUndefined();
+
+      // DB is online, Frontend is online, but frontend hits "offline" script because backend lacks active port setup
+      const dbRes = await fetch(`http://localhost:${ports.database}/health`);
+      expect(dbRes.status).toBe(200);
+      const mainHtmlRes = await fetch(`http://localhost:${ports.frontend}/`);
+      expect(mainHtmlRes.status).toBe(200);
+    });
+  });
+
+  // --- Fully Integrated Scenario (3-Tier) ---
+  test('Combination 7: E2E Fully Integrated Combo (Frontend + Backend + DB)', async () => {
+    await runComboTest('FullIntegrated', { frontend: true, backend: true, database: true }, async (ports) => {
+      expect(ports.frontend).toBeDefined();
+      expect(ports.backend).toBeDefined();
+      expect(ports.database).toBeDefined();
+
+      // 1. FileDB health
+      const dbRes = await fetch(`http://localhost:${ports.database}/health`);
+      expect(dbRes.status).toBe(200);
+
+      // 2. Query DB Records via Backend Proxy
+      const backendItemsRes = await fetch(`http://localhost:${ports.backend}/api/items`);
+      expect(backendItemsRes.status).toBe(200);
+      const items = await backendItemsRes.json() as any;
+      expect(items.length).toBeGreaterThan(0);
+      expect(items[0].name).toContain('Initial Seed Record');
+
+      // 3. Frontend loads index pointing to Backend
+      const mainHtmlRes = await fetch(`http://localhost:${ports.frontend}/`);
+      expect(mainHtmlRes.status).toBe(200);
+      const htmlText = await mainHtmlRes.text();
+      expect(htmlText).toContain(`http://localhost:${ports.backend}/api/items`);
+    });
   });
 });

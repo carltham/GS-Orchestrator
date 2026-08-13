@@ -5,102 +5,55 @@
 
 import express, { Express } from 'express';
 import * as path from 'path';
-import { ProcessClient } from '@gs/process-client';
-import { createHealthRoutes } from './routes/healthRoutes';
-import { createRegistrationRoutes } from './routes/registrationRoutes';
-import { createRegistryRoutes } from './routes/registryRoutes';
-import { createScannerRoutes } from './routes/scannerRoutes';
-import { createAuthRoutes } from './routes/authRoutes';
-import { createAdminRoutes } from './routes/adminRoutes';
-import { PortAllocatorService } from './services/PortAllocatorService';
 import { RegistryService } from './services/RegistryService';
 import { ServerScannerService } from './services/ServerScannerService';
+import { PortAllocatorService } from './services/PortAllocatorService';
 import { UserService } from './services/UserService';
 import { detectOwnProjectName } from './utils/selfDetector';
+import { showBanner } from './utils/banner';
+import { prepareCors, prepareRoutes, prepareStaticAssets } from './app';
 
 const app: Express = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
 const SELF_PROJECT_NAME = detectOwnProjectName();
 
-// Persistence Paths (Stored in workspace db/ directory at root)
-const registryPath = path.join(__dirname, '..', '..', 'db', 'registry.json');
-const unregisteredPath = path.join(__dirname, '..', '..', 'db', 'unregistered-servers.json');
-const usersPath = path.join(__dirname, '..', '..', 'db', 'users.json');
+// Persistence Paths
+let registryPath: string;
+let unregisteredPath: string;
+let usersPath: string;
 
-// Core Domain Services
-const registry = new RegistryService(registryPath);
-const serverScanner = new ServerScannerService(unregisteredPath, registry);
-const portAllocator = new PortAllocatorService(registry, serverScanner);
-const userService = new UserService(usersPath);
+// Core Domain Services (Singletons)
+let registry: RegistryService;
+let serverScanner: ServerScannerService;
+let portAllocator: PortAllocatorService;
+let userService: UserService;
 
-// Simple manual CORS header middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
+function init(): void {
+  // Setup persistence JSON directory links
+  registryPath = path.join(__dirname, '..', '..', 'db', 'registry.json');
+  unregisteredPath = path.join(__dirname, '..', '..', 'db', 'unregistered-servers.json');
+  usersPath = path.join(__dirname, '..', '..', 'db', 'users.json');
+
+  // Load backend domain singletons
+  registry = new RegistryService(registryPath);
+  serverScanner = new ServerScannerService(unregisteredPath, registry);
+  portAllocator = new PortAllocatorService(registry, serverScanner);
+  userService = new UserService(usersPath);
+}
+
+// Trigger initialization
+init();
+
+// Configure the container / express app controller middleware
+prepareCors(app);
 app.use(express.json());
+prepareRoutes(app, userService, registry, PORT, portAllocator, serverScanner, SELF_PROJECT_NAME);
+prepareStaticAssets(app);
 
-// Routes
-app.use('/orch/auth', createAuthRoutes(userService));
-app.use('/orch/admin', createAdminRoutes(userService));
-app.use(createHealthRoutes(registry, PORT));
-app.use(createRegistrationRoutes(registry, portAllocator, serverScanner, SELF_PROJECT_NAME));
-app.use(createRegistryRoutes(registry, serverScanner));
-app.use(createScannerRoutes(serverScanner));
-
-// Static GUI Asset Hosting (Angular GS-Orchestrator-GUI)
-const guiDistPath = path.join(__dirname, '..', '..', 'GS-Orchestrator-GUI', 'dist', 'gs-orchestrator-gui', 'browser');
-app.use(express.static(guiDistPath));
-
-// SPA Fallback: Route all non-API requests to index.html
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/orch') || req.path.startsWith('/reports') || req.path.includes('.')) {
-    return next();
-  }
-  const indexPath = path.join(guiDistPath, 'index.html');
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      res.status(200).send('<h1>GS-Orchestrator Control Center</h1><p>GUI build pending or not found.</p>');
-    }
-  });
-});
-
-export { app, registry, serverScanner, portAllocator, userService, SELF_PROJECT_NAME };
-
+// Server Spawning & Active Port Listen
 if (require.main === module) {
   app.listen(PORT, async () => {
-    console.log(`🎯 GS-Orchestrator running on http://localhost:${PORT}`);
-    console.log(`📋 Registry: ${registryPath}`);
-    console.log(`🔍 Unregistered Servers File: ${unregisteredPath}`);
-    console.log(`👥 Users Database: ${usersPath}`);
-    console.log(`\nAuthentication Endpoints:`);
-    console.log(`  POST   /api/auth/login          - Login (username required, password optional for thor)`);
-    console.log(`  POST   /api/auth/logout         - Logout`);
-    console.log(`  GET    /api/auth/current-user   - Get current user`);
-    console.log(`  GET    /api/auth/check          - Check authentication status`);
-    console.log(`\nAdmin Endpoints (Superadmin only):`);
-    console.log(`  GET    /api/admin/users         - List all users`);
-    console.log(`  POST   /api/admin/users         - Create new user`);
-    console.log(`  PUT    /api/admin/users/:id     - Update user`);
-    console.log(`  DELETE /api/admin/users/:id     - Delete user`);
-    console.log(`  POST   /api/admin/users/:id/disable  - Disable user`);
-    console.log(`  POST   /api/admin/users/:id/enable   - Enable user`);
-    console.log(`  POST   /api/admin/users/:id/change-password - Change password`);
-    console.log(`\nOrchestrator Endpoints:`);
-    console.log(`  POST   /api/register      - Register a project and allocate ports`);
-    console.log(`  DELETE /api/register/:name - Unregister a project`);
-    console.log(`  POST   /api/health        - Receive health report from project`);
-    console.log(`  GET    /api/signals/:name - Get pending signals for project`);
-    console.log(`  POST   /api/signals/:name/ack - Mark signals as processed`);
-    console.log(`  GET    /api/unregistered  - List detected unregistered running servers`);
-    console.log(`  GET    /health            - Health check`);
-
-    console.log(`\n🔍 Scanning for unregistered running servers...`);
+    showBanner(PORT, registryPath, unregisteredPath, usersPath);
     try {
       const discovered = await serverScanner.scanRunningServers();
       if (discovered.length > 0) {
@@ -114,20 +67,8 @@ if (require.main === module) {
     }
 
     serverScanner.startPeriodicScan(30000);
-
-    // Initialize and start ProcessClient to connect to ProcessServer (:9999) without spawning self
-    try {
-      const processClient = new ProcessClient({
-        projectName: SELF_PROJECT_NAME || 'GS-Orchestrator'
-      });
-      // Register with ProcessServer for heartbeats and signals without triggering secondary spawn
-      await (processClient as any).sendHeartbeat();
-      processClient.start = async function() {
-        console.log(`[ProcessClient] Registered in ${SELF_PROJECT_NAME || 'GS-Orchestrator'} server instance`);
-      };
-      console.log('✅ Connected to ProcessServer (:9999) via ProcessClient');
-    } catch (processClientErr: any) {
-      console.warn(`⚠️ Could not connect ProcessClient to ProcessServer (:9999): ${processClientErr.message}`);
-    }
   });
 }
+
+// Exportable instance bindings (preserved exports for tests/consumers)
+export { app, registry, serverScanner, portAllocator, userService, SELF_PROJECT_NAME };
