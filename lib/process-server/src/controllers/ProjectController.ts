@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { projectRegistry } from '../models/ProjectRegistry';
+import { SystemConfigService } from '../services/SystemConfigService';
 
 export class ProjectController {
   // POST /ps/project/register
@@ -57,9 +58,32 @@ export class ProjectController {
     res.json(project);
   }
 
+  // PUT /ps/project/:name/status
+  public updateProjectStatus(req: Request, res: Response): any {
+    const name = req.params.name;
+    const { status } = req.body || {};
+    const project = projectRegistry.getProject(name);
+    if (!project) {
+      return res.status(404).json({ error: `Project "${name}" was not found` });
+    }
+    if (status) {
+      project.status = status;
+      projectRegistry.updateProject(name, project);
+    }
+    res.json({ status: 'updated', project: name, currentStatus: project.status });
+  }
+
   // DELETE /ps/project/:name
   public unregisterProject(req: Request, res: Response): any {
     const name = req.params.name;
+    const sysConfig = SystemConfigService.getInstance();
+
+    if (sysConfig.isProtectedService(name) && sysConfig.getRules().preventUnregister) {
+      return res.status(400).json({
+        error: sysConfig.formatError('cannotStopSelf', { projectName: name })
+      });
+    }
+
     const success = projectRegistry.unregisterProject(name);
     if (!success) {
       return res.status(404).json({ error: `Project "${name}" was not found` });

@@ -97,6 +97,12 @@ export class OrchestratorService {
     });
   }
 
+  stopProject(projectName: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/orch/project/${projectName}/stop`, {}, {
+      headers: this.authService.getAuthHeaders()
+    });
+  }
+
   unregisterProject(projectName: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/orch/project/${projectName}`, {
       headers: this.authService.getAuthHeaders()

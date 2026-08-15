@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { processRegistry, ProcessHeartbeat } from '../models/ProcessRegistry';
+import { SystemConfigService } from '../services/SystemConfigService';
 
 export class ProcessController {
   // GET /ps/process/signals
@@ -17,8 +18,18 @@ export class ProcessController {
   // POST /ps/process/signals
   public queueSignal(req: Request, res: Response): any {
     const { targetProject, action, ports } = req.body || {};
+    const sysConfig = SystemConfigService.getInstance();
+
     if (!targetProject || !action) {
       return res.status(400).json({ error: 'targetProject and action are required' });
+    }
+
+    if (sysConfig.isProtectedService(targetProject)) {
+      if ((action === 'STOP' || action === 'DELETE') && sysConfig.getRules().preventStop) {
+        return res.status(400).json({
+          error: sysConfig.formatError('cannotStopSelf', { projectName: targetProject })
+        });
+      }
     }
 
     const signal = processRegistry.queueSignal({

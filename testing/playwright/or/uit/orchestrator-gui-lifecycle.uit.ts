@@ -150,4 +150,147 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
     const badgeTextAfter = await orchStatusBadge.textContent();
     expect(badgeTextAfter?.trim()).toBe('running');
   });
+
+  test('should support full GUI lifecycle: start, stop, restart, stop again, and remove project', async ({ page }) => {
+    const LIFECYCLE_PROJECT = 'GUI-Full-Lifecycle-App';
+
+    // 1. Pre-register the test project via API as running
+    await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectName: LIFECYCLE_PROJECT,
+        path: '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/lifecycle-app',
+        serviceTypes: { backend: 'node-ts', frontend: 'angular' }
+      })
+    });
+
+    // 2. Authenticate as Thor and open projects page
+    const projectsTab = page.locator('[data-testid="nav-tab-projects"]');
+    await projectsTab.click();
+    await page.waitForTimeout(500);
+
+    const loginBtn = page.locator('button:has-text("Thor Superadmin Login")');
+    if (await loginBtn.isVisible()) {
+      await loginBtn.click();
+    } else {
+      const loginPrompt = page.locator('button:has-text("Click here to login"), .login-prompt button');
+      if (await loginPrompt.isVisible()) {
+        await loginPrompt.click();
+        await page.waitForSelector('button:has-text("Thor Superadmin Login")');
+        await page.locator('button:has-text("Thor Superadmin Login")').click();
+      }
+    }
+    await page.waitForTimeout(1000);
+
+    await projectsTab.click();
+    await page.waitForSelector('[data-testid="registered-projects-table"]');
+
+    // Locate project row
+    const projectRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: LIFECYCLE_PROJECT }) });
+    await expect(projectRow).toBeVisible();
+    const statusBadge = projectRow.locator('.badge-clickable');
+
+    // --- STEP 1: STOP PROJECT (1st time) ---
+    await statusBadge.click();
+    await expect(page.locator('.modal-content h3')).toContainText('Manage Project State');
+    await page.locator('.btn-danger:has-text("Stop Project")').click();
+    
+    // Confirm in dialog if prompt appears
+    const confirmStop1 = page.locator('button:has-text("Confirm"), .dialog-btn-confirm');
+    if (await confirmStop1.isVisible()) {
+      await confirmStop1.click();
+    }
+    const okStop1 = page.locator('button:has-text("OK"), button:has-text("Close")');
+    if (await okStop1.isVisible()) {
+      await okStop1.click();
+    }
+    await page.waitForTimeout(1000);
+
+    // Simulate client acknowledging stopped state
+    await fetch(`${ORCHESTRATOR_URL}/orch/reporting/project/${LIFECYCLE_PROJECT}/is-stopped`, { method: 'POST' });
+    await page.reload();
+    await page.waitForSelector('[data-testid="registered-projects-table"]');
+
+    // --- STEP 2: RESTART PROJECT (Start again) ---
+    const stoppedRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: LIFECYCLE_PROJECT }) });
+    await expect(stoppedRow).toBeVisible();
+    await stoppedRow.locator('.badge-clickable').click();
+    await expect(page.locator('.modal-content h3')).toContainText('Manage Project State');
+    
+    // In stopped state, both Restart and Remove Project are available
+    await expect(page.locator('button:has-text("Remove Project")')).toBeVisible();
+    await expect(page.locator('button:has-text("Restart Project")')).toBeVisible();
+
+    // Click Restart Project
+    await page.locator('button:has-text("Restart Project")').click();
+    const confirmRestart = page.locator('button:has-text("Confirm"), .dialog-btn-confirm');
+    if (await confirmRestart.isVisible()) {
+      await confirmRestart.click();
+    }
+    const okRestart = page.locator('button:has-text("OK"), button:has-text("Close")');
+    if (await okRestart.isVisible()) {
+      await okRestart.click();
+    }
+    await page.waitForTimeout(1000);
+
+    // Simulate client heartbeating / re-registering back to running
+    await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectName: LIFECYCLE_PROJECT,
+        path: '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/lifecycle-app',
+        serviceTypes: { backend: 'node-ts', frontend: 'angular' }
+      })
+    });
+    await page.reload();
+    await page.waitForSelector('[data-testid="registered-projects-table"]');
+
+    // --- STEP 3: STOP PROJECT AGAIN (2nd time) ---
+    const runningAgainRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: LIFECYCLE_PROJECT }) });
+    await expect(runningAgainRow).toBeVisible();
+    await runningAgainRow.locator('.badge-clickable').click();
+    await expect(page.locator('.modal-content h3')).toContainText('Manage Project State');
+    await page.locator('.btn-danger:has-text("Stop Project")').click();
+    
+    const confirmStop2 = page.locator('button:has-text("Confirm"), .dialog-btn-confirm');
+    if (await confirmStop2.isVisible()) {
+      await confirmStop2.click();
+    }
+    const okStop2 = page.locator('button:has-text("OK"), button:has-text("Close")');
+    if (await okStop2.isVisible()) {
+      await okStop2.click();
+    }
+    await page.waitForTimeout(1000);
+
+    // Simulate client confirming stopped
+    await fetch(`${ORCHESTRATOR_URL}/orch/reporting/project/${LIFECYCLE_PROJECT}/is-stopped`, { method: 'POST' });
+    await page.reload();
+    await page.waitForSelector('[data-testid="registered-projects-table"]');
+
+    // --- STEP 4: REMOVE PROJECT FROM REGISTRY ---
+    const finalStoppedRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: LIFECYCLE_PROJECT }) });
+    await expect(finalStoppedRow).toBeVisible();
+    await finalStoppedRow.locator('.badge-clickable').click();
+    await expect(page.locator('.modal-content h3')).toContainText('Manage Project State');
+
+    // Click Remove Project
+    await page.locator('button:has-text("Remove Project")').click();
+    const confirmRemove = page.locator('button:has-text("Confirm"), .dialog-btn-confirm');
+    if (await confirmRemove.isVisible()) {
+      await confirmRemove.click();
+    }
+    const okRemove = page.locator('button:has-text("OK"), button:has-text("Close")');
+    if (await okRemove.isVisible()) {
+      await okRemove.click();
+    }
+    await page.waitForTimeout(1000);
+
+    // Verify project is completely removed from the registered projects table
+    await page.reload();
+    await page.waitForSelector('[data-testid="registered-projects-table"]');
+    const removedRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: LIFECYCLE_PROJECT }) });
+    await expect(removedRow).not.toBeVisible();
+  });
 });

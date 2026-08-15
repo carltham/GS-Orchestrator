@@ -15,6 +15,7 @@ export class StateModalComponent {
   @Output() closed = new EventEmitter<void>();
   @Output() stopProjectClicked = new EventEmitter<void>();
   @Output() restartProjectClicked = new EventEmitter<void>();
+  @Output() removeProjectClicked = new EventEmitter<void>();
 
   closeModal(): void {
     this.closed.emit();
@@ -26,5 +27,9 @@ export class StateModalComponent {
 
   restartProject(): void {
     this.restartProjectClicked.emit();
+  }
+
+  removeProject(): void {
+    this.removeProjectClicked.emit();
   }
 }

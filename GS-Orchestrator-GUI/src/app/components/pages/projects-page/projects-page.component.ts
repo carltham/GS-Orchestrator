@@ -57,7 +57,7 @@ export class ProjectsPageComponent implements OnInit {
     );
     if (!confirmed) return;
 
-    this.orchestratorService.unregisterProject(projectName).subscribe({
+    this.orchestratorService.stopProject(projectName).subscribe({
       next: async (res: any) => {
         await this.dialogService.alert(
           `Project "${projectName}" is now stopping. Stop signal sent to client.`,
@@ -69,6 +69,34 @@ export class ProjectsPageComponent implements OnInit {
       error: async (err: any) => {
         await this.dialogService.alert(
           `Failed to stop project: ${err.error?.error || 'Unknown error'}`,
+          'Error'
+        );
+      }
+    });
+  }
+
+  async onRemoveProject(): Promise<void> {
+    if (!this.selectedProject) return;
+
+    const projectName = this.selectedProject.name;
+    const confirmed = await this.dialogService.confirm(
+      `Are you sure you want to remove project "${projectName}" from the registry?`,
+      'Remove Project'
+    );
+    if (!confirmed) return;
+
+    this.orchestratorService.unregisterProject(projectName).subscribe({
+      next: async (res: any) => {
+        await this.dialogService.alert(
+          `Project "${projectName}" removed. Delete signal sent to client.`,
+          'Project Removed'
+        );
+        this.closeStateModal();
+        setTimeout(() => this.refresh(), 500);
+      },
+      error: async (err: any) => {
+        await this.dialogService.alert(
+          `Failed to remove project: ${err.error?.error || 'Unknown error'}`,
           'Error'
         );
       }

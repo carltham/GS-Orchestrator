@@ -16,6 +16,7 @@ export function createRegistrationRoutes(
   const sysConfig = SystemConfigService.getInstance();
 
   // DELETE /orch/project/:projectName
+  // Queues DELETE signal to client to unregister and terminate client
   router.delete('/orch/project/:projectName', async (req: Request, res: Response) => {
     try {
       const projectName = req.params.projectName;
@@ -26,41 +27,36 @@ export function createRegistrationRoutes(
         });
       }
 
-      if ((projectName === selfProjectName || sysConfig.isProtectedService(projectName)) && sysConfig.getRules().preventStop) {
+      if ((projectName === selfProjectName || sysConfig.isProtectedService(projectName)) && sysConfig.getRules().preventUnregister) {
         return res.status(400).json({
           error: sysConfig.formatError('cannotStopSelf', { projectName }),
         });
       }
 
-      // Update project status to 'stopping'
-      const project = registry.getProject(projectName);
-      if (project) {
-        project.status = 'stopping';
-        registry.updateProject(projectName, project);
-      }
-
-      // Queue a stop signal for the client via Process Server
+      // Queue a DELETE signal for the client via Process Server
       await fetch('http://localhost:9999/ps/process/signals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetProject: projectName, action: 'STOP' })
+        body: JSON.stringify({ targetProject: projectName, action: 'DELETE' })
       }).catch(err => {
-        console.warn(`⚠️ Could not post STOP signal to Process Server: ${err.message}`);
+        console.warn(`⚠️ Could not post DELETE signal to Process Server: ${err.message}`);
       });
 
-      if (project) {
-        console.log(`🛑 Project "${projectName}" status changed to stopping. Stop signal queued for client.`);
-        return res.json({
-          message: `Project "${projectName}" is stopping. Stop signal queued for client.`,
-          projectName,
-          status: 'stopping',
-          timestamp: new Date().toISOString(),
-        });
-      } else {
-        return res.status(404).json({
-          error: sysConfig.formatError('projectNotFound', { projectName }),
-        });
-      }
+      // Remove from local Orchestrator registry if present
+      registry.unregisterProject(projectName);
+
+      // Remove from Process Server (:9999) master registry
+      await fetch(`http://localhost:9999/ps/project/${encodeURIComponent(projectName)}`, {
+        method: 'DELETE'
+      }).catch(() => {});
+
+      console.log(`🗑️ Project "${projectName}" unregistration requested. DELETE signal queued for client.`);
+      return res.json({
+        message: `Project "${projectName}" unregistration requested. DELETE signal queued for client.`,
+        projectName,
+        status: 'unregistered',
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Unregistration error:', error);
       res.status(500).json({
@@ -90,6 +86,13 @@ export function createRegistrationRoutes(
 
       project.status = 'starting';
       registry.updateProject(projectName, project);
+
+      // Sync status to Process Server (:9999)
+      await fetch(`http://localhost:9999/ps/project/${encodeURIComponent(projectName)}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'starting' })
+      }).catch(() => {});
 
       // Extract ports for the START signal
       const ports: Record<string, number> = {};
@@ -129,6 +132,68 @@ export function createRegistrationRoutes(
     }
   });
 
+  // POST /orch/project/:projectName/stop
+  router.post('/orch/project/:projectName/stop', async (req: Request, res: Response) => {
+    try {
+      const projectName = req.params.projectName;
+
+      if (!projectName) {
+        return res.status(400).json({
+          error: sysConfig.formatError('missingProjectName'),
+        });
+      }
+
+      if ((projectName === selfProjectName || sysConfig.isProtectedService(projectName)) && sysConfig.getRules().preventStop) {
+        return res.status(400).json({
+          error: sysConfig.formatError('cannotStopSelf', { projectName }),
+        });
+      }
+
+      // Update project status to 'stopping'
+      const project = registry.getProject(projectName);
+      if (project) {
+        project.status = 'stopping';
+        registry.updateProject(projectName, project);
+      }
+
+      // Sync status to Process Server (:9999)
+      await fetch(`http://localhost:9999/ps/project/${encodeURIComponent(projectName)}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'stopping' })
+      }).catch(() => {});
+
+      // Queue a stop signal for the client via Process Server
+      await fetch('http://localhost:9999/ps/process/signals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetProject: projectName, action: 'STOP' })
+      }).catch(err => {
+        console.warn(`⚠️ Could not post STOP signal to Process Server: ${err.message}`);
+      });
+
+      if (project) {
+        console.log(`🛑 Project "${projectName}" status changed to stopping. Stop signal queued for client.`);
+        return res.json({
+          message: `Project "${projectName}" is stopping. Stop signal queued for client.`,
+          projectName,
+          status: 'stopping',
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        return res.status(404).json({
+          error: sysConfig.formatError('projectNotFound', { projectName }),
+        });
+      }
+    } catch (error) {
+      console.error('Stop error:', error);
+      res.status(500).json({
+        error: sysConfig.formatError('unregisterFailed'),
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
   // POST /orch/reporting/project/:projectName/is-stopped
   // Mark a project as stopped (keep in registry)
   router.post('/orch/reporting/project/:projectName/is-stopped', async (req: Request, res: Response) => {
@@ -151,6 +216,14 @@ export function createRegistrationRoutes(
       if (project) {
         project.status = 'stopped';
         registry.updateProject(projectName, project);
+
+        // Sync status to Process Server (:9999)
+        await fetch(`http://localhost:9999/ps/project/${encodeURIComponent(projectName)}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'stopped' })
+        }).catch(() => {});
+
         console.log(`✅ Project "${projectName}" marked as stopped in registry`);
         return res.json({
           message: `Project "${projectName}" status updated to stopped`,
@@ -204,6 +277,13 @@ export function createRegistrationRoutes(
         }
 
         registry.updateProject(projectName, existing);
+
+        // Sync status to Process Server (:9999)
+        await fetch(`http://localhost:9999/ps/project/${encodeURIComponent(projectName)}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'running' })
+        }).catch(() => {});
 
         console.log(`✅ Project "${projectName}" already registered, updated status to running`);
 
@@ -275,6 +355,25 @@ export function createRegistrationRoutes(
       const ticket = `ticket-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
       registry.registerProject(projectName, projectPath, components, ticket);
+
+      // Register on ProcessServer (:9999) master registry as well
+      await fetch('http://localhost:9999/ps/project/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectName,
+          path: projectPath,
+          serviceTypes,
+          ticket
+        })
+      }).catch(() => {});
+
+      // Sync running status to Process Server (:9999)
+      await fetch(`http://localhost:9999/ps/project/${encodeURIComponent(projectName)}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'running' })
+      }).catch(() => {});
 
       console.log(`✨ Project "${projectName}" registered with components: ${JSON.stringify(components)}`);
       res.status(201).json({

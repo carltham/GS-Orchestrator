@@ -9,12 +9,15 @@
         Project: <strong>{{ project.name }}</strong><br>
         Current Status: <strong>{{ project.status || 'running' }}</strong>
       </p>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-danger" (click)="stopProject()" style="flex: 1;">
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button *ngIf="!project || project.status !== 'stopped'" class="btn btn-danger" (click)="stopProject()" style="flex: 1; min-width: 140px;">
           🛑 Stop Project
         </button>
-        <button class="btn btn-primary" (click)="restartProject()" style="flex: 1;">
+        <button class="btn btn-primary" (click)="restartProject()" style="flex: 1; min-width: 140px;">
           🔄 Restart Project
+        </button>
+        <button *ngIf="project && project.status === 'stopped'" class="btn btn-danger" (click)="removeProject()" style="flex: 1; min-width: 140px; background: #dc2626;">
+          🗑️ Remove Project
         </button>
       </div>
     </div>
