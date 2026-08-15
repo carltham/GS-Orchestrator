@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Consolidated testing package for SFT, SIT, and UIT suites",
   "scripts": {
-    "test:sft": "jest --config jest.config.js --testMatch '**/or/sft/**/*.test.ts' --runInBand --passWithNoTests",
+    "test:sft": "jest --config jest.config.js --testMatch '**/or/sft/**/*.test.ts' '**/ps/sft/**/*.test.ts' '**/pc/sft/**/*.test.ts' --runInBand --passWithNoTests",
     "test:sit": "jest --config jest.config.js --testMatch '**/ps/sit/**/*.test.ts' '**/sys/sit/**/*.test.ts' --runInBand --passWithNoTests"
   },
   "dependencies": {

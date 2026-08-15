@@ -1,0 +1,60 @@
+{
+  "projects": {
+    "TestApp": {
+      "name": "TestApp",
+      "path": "/tmp/testapp",
+      "registeredAt": "2026-08-15T13:14:09.192Z",
+      "components": {
+        "backend::node-ts": {
+          "port": 3000,
+          "status": "running",
+          "pid": null
+        },
+        "frontend::vite": {
+          "port": 5174,
+          "status": "running",
+          "pid": null
+        },
+        "database::postgres": {
+          "port": 5434,
+          "status": "running",
+          "pid": null
+        }
+      },
+      "status": "running"
+    },
+    "GS-Orchestrator": {
+      "name": "GS-Orchestrator",
+      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
+      "registeredAt": "2026-08-15T13:14:09.200Z",
+      "components": {
+        "backend::node-ts": {
+          "port": 10000,
+          "status": "running",
+          "pid": null
+        },
+        "frontend::angular": {
+          "port": 10000,
+          "status": "running",
+          "pid": null
+        }
+      },
+      "status": "running"
+    },
+    "IdempotentApp": {
+      "name": "IdempotentApp",
+      "path": "/tmp/idempotent",
+      "registeredAt": "2026-08-15T13:14:09.267Z",
+      "components": {
+        "backend::node-ts": {
+          "port": 3003,
+          "status": "running",
+          "pid": null
+        }
+      },
+      "status": "running"
+    }
+  },
+  "nextPortBase": 4200,
+  "lastUpdated": "2026-08-15T13:14:09.267Z"
+}

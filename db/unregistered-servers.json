@@ -1,30 +1,4 @@
 {
-  "lastScanned": "2026-08-15T10:55:09.152Z",
-  "servers": [
-    {
-      "port": 3001,
-      "pid": 4066261,
-      "projectName": "backend",
-      "projectPath": "/mnt/DATA/Projects/0.present-projects/Active/GSShopper/gsshopper/backend",
-      "cmd": "node /mnt/DATA/Projects/0.present-projects/Active/GSShopper/node_modules/.bin/ts-node /mnt/DATA/Projects/0.present-projects/Active/GSShopper/gsshopper/backend/src/index.ts",
-      "type": "http-service",
-      "detectedAt": "2026-08-15T10:55:06.229Z"
-    },
-    {
-      "port": 5173,
-      "pid": 4066247,
-      "projectName": "web",
-      "projectPath": "/mnt/DATA/Projects/0.present-projects/Active/GSShopper/gsshopper/frontend/web",
-      "cmd": "node /mnt/DATA/Projects/0.present-projects/Active/GSShopper/node_modules/.bin/vite",
-      "type": "http-service",
-      "detectedAt": "2026-08-15T10:55:07.164Z"
-    },
-    {
-      "port": 5433,
-      "projectName": "PostgreSQL System Service",
-      "cmd": "System Daemon / Docker Proxy (PostgreSQL)",
-      "type": "database::postgres",
-      "detectedAt": "2026-08-15T10:55:08.104Z"
-    }
-  ]
+  "lastScanned": "2026-08-15T13:14:10.068Z",
+  "servers": []
 }

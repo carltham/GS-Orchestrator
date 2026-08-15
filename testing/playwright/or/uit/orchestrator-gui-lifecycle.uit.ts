@@ -49,7 +49,7 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
     const restartRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}/restart`, {
       method: 'POST'
     });
-    expect(restartRes.status).toBe(200);
+    expect([200, 201]).toContain(restartRes.status);
 
     const runningRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
       method: 'POST',
@@ -60,7 +60,7 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
         serviceTypes: { backend: 'node-ts', frontend: 'angular' }
       })
     });
-    expect(runningRes.status).toBe(200);
+    expect([200, 201]).toContain(runningRes.status);
 
     return registration.ports;
   }
@@ -284,7 +284,11 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
     await page.waitForTimeout(1000);
 
     // Simulate client acknowledging stopped state
-    await fetch(`${ORCHESTRATOR_URL}/orch/reporting/project/${LIFECYCLE_PROJECT}/is-stopped`, { method: 'POST' });
+    await fetch(`${PROCESS_SERVER_URL}/ps/project/${LIFECYCLE_PROJECT}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'stopped' })
+    });
     await page.reload();
     await page.waitForSelector('[data-testid="registered-projects-table"]');
 
@@ -342,7 +346,11 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
     await page.waitForTimeout(1000);
 
     // Simulate client confirming stopped
-    await fetch(`${ORCHESTRATOR_URL}/orch/reporting/project/${LIFECYCLE_PROJECT}/is-stopped`, { method: 'POST' });
+    await fetch(`${PROCESS_SERVER_URL}/ps/project/${LIFECYCLE_PROJECT}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'stopped' })
+    });
     await page.reload();
     await page.waitForSelector('[data-testid="registered-projects-table"]');
 

@@ -155,50 +155,46 @@ export class PureServerScannerService {
     const registeredPorts = new Set(registeredPortsList);
     const resolvedRegisteredPaths = registeredProjectPaths.map(p => path.resolve(p));
 
-    const detectedServers: UnregisteredServer[] = [];
-
+    const targetPorts: number[] = [];
     for (const [startPort, endPort] of portRanges) {
       for (let p = startPort; p <= endPort; p++) {
-        // Skip orchestrator port 10000 and registered ports
-        if (p === 10000 || registeredPorts.has(p)) {
-          continue;
-        }
-
-        const occupied = await this.isPortOccupied(p);
-        if (occupied) {
-          const type = await this.probeHttpType(p);
-          const processInfo = this.inspectProcessOnPort(p);
-
-          // Check if process projectPath belongs to any registered project directory
-          let belongsToRegisteredProject = false;
-          if (processInfo.projectPath) {
-            const resolvedProcPath = path.resolve(processInfo.projectPath);
-            for (const regPath of resolvedRegisteredPaths) {
-              if (resolvedProcPath === regPath || resolvedProcPath.startsWith(regPath + path.sep)) {
-                belongsToRegisteredProject = true;
-                break;
-              }
-            }
-          }
-
-          if (belongsToRegisteredProject) {
-            continue;
-          }
-
-          detectedServers.push({
-            port: p,
-            pid: processInfo.pid,
-            projectName: processInfo.projectName,
-            projectPath: processInfo.projectPath,
-            cmd: processInfo.cmd,
-            type,
-            detectedAt: new Date().toISOString(),
-          });
+        if (p !== 10000 && !registeredPorts.has(p)) {
+          targetPorts.push(p);
         }
       }
     }
 
-    return detectedServers;
+    const scanResults = await Promise.all(
+      targetPorts.map(async (p) => {
+        const occupied = await this.isPortOccupied(p);
+        if (!occupied) return null;
+
+        const type = await this.probeHttpType(p);
+        const processInfo = this.inspectProcessOnPort(p);
+
+        // Check if process projectPath belongs to any registered project directory
+        if (processInfo.projectPath) {
+          const resolvedProcPath = path.resolve(processInfo.projectPath);
+          for (const regPath of resolvedRegisteredPaths) {
+            if (resolvedProcPath === regPath || resolvedProcPath.startsWith(regPath + path.sep)) {
+              return null;
+            }
+          }
+        }
+
+        return {
+          port: p,
+          pid: processInfo.pid,
+          projectName: processInfo.projectName,
+          projectPath: processInfo.projectPath,
+          cmd: processInfo.cmd,
+          type,
+          detectedAt: new Date().toISOString(),
+        } as UnregisteredServer;
+      })
+    );
+
+    return scanResults.filter((s): s is UnregisteredServer => s !== null);
   }
 }
 

@@ -64,6 +64,14 @@ export class ProjectController {
   public updateProjectStatus(req: Request, res: Response): any {
     const name = req.params.name;
     const { status } = req.body || {};
+    const sysConfig = SystemConfigService.getInstance();
+
+    if (sysConfig.isProtectedService(name) && status === 'stopped' && sysConfig.getRules().preventMarkStopped) {
+      return res.status(400).json({
+        error: sysConfig.formatError('cannotMarkStoppedSelf', { projectName: name })
+      });
+    }
+
     const project = projectRegistry.getProject(name);
     if (!project) {
       return res.status(404).json({ error: `Project "${name}" was not found` });

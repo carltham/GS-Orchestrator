@@ -2,6 +2,9 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import routes from './routes';
 
+import { projectRegistry } from './models/ProjectRegistry';
+import { pureServerScanner } from './services/ServerScannerService';
+
 const PORT = process.env.PROCESS_SERVER_PORT ? parseInt(process.env.PROCESS_SERVER_PORT, 10) : 9999;
 
 const app = express();
@@ -28,4 +31,5 @@ if (require.main === module) {
   });
 }
 
+export { app, PORT, projectRegistry, pureServerScanner };
 export default app;

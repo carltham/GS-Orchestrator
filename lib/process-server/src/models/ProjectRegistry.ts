@@ -147,10 +147,12 @@ export class ProjectRegistry {
       // If already allocated, check if the previously assigned port is currently conflicting with a client-reported active port (e.g. host service/docker)
       if (matchedCompKey) {
         const currentPort = componentsPorts[matchedCompKey].port;
-        if (excludedPorts.has(currentPort) || this.isPortActive(currentPort)) {
+        if (name !== 'GS-Orchestrator' && name !== 'gs-orchestrator' && (excludedPorts.has(currentPort) || this.isPortActive(currentPort))) {
           // Re-allocate avoiding excluded ports
           const allocatedPort = this.allocatePort(name, serviceName, serviceType, data, excludedPorts);
           componentsPorts[matchedCompKey].port = allocatedPort;
+        } else if (name === 'GS-Orchestrator' || name === 'gs-orchestrator') {
+          componentsPorts[matchedCompKey].port = 10000;
         }
       } else {
         const allocatedPort = this.allocatePort(name, serviceName, serviceType, data, excludedPorts);
@@ -189,6 +191,11 @@ export class ProjectRegistry {
     data: RegistryData,
     excludedPorts: Set<number> = new Set()
   ): number {
+    // Fixed port allocation for Orchestrator itself
+    if (projectName === 'GS-Orchestrator' || projectName === 'gs-orchestrator') {
+      return 10000;
+    }
+
     const typeKey = (serviceType || serviceName).toLowerCase();
     const basePort = SERVICE_TYPE_BASE_PORTS[typeKey] || 3000;
 

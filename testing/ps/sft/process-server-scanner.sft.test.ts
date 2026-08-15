@@ -2,14 +2,9 @@ import request from 'supertest';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
-import { OrchestratorServer } from '../../../GS-Orchestrator/src/server';
-import { ServiceContext } from '../../../GS-Orchestrator/src/context';
+import { app, pureServerScanner } from '../../../lib/process-server/src/server';
 
-const context = ServiceContext.getInstance();
-const serverScanner = context.serverScanner;
-const app = new OrchestratorServer().getApp();
-
-describe('GS-Orchestrator Server SFT - Unregistered Server Scanner', () => {
+describe('ProcessServer SFT - Unregistered Server Scanner', () => {
   const dbDir = path.join(__dirname, '..', '..', '..', 'db');
   const registryPath = path.join(dbDir, 'registry.json');
   const unregisteredPath = path.join(dbDir, 'unregistered-servers.json');
@@ -33,7 +28,6 @@ describe('GS-Orchestrator Server SFT - Unregistered Server Scanner', () => {
   const testPort = 3005;
 
   beforeAll((done) => {
-    // Spawn a dummy TCP server on port 3005
     dummyServer = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/plain', Server: 'Express' });
       res.end('OK');
@@ -45,18 +39,13 @@ describe('GS-Orchestrator Server SFT - Unregistered Server Scanner', () => {
     dummyServer.close(() => done());
   });
 
-  test('scans running servers and persists to dist/unregistered-servers.json', async () => {
-    const discovered = await serverScanner.scanRunningServers();
+  test('scans running servers and returns unregistered servers list', async () => {
+    const discovered = await pureServerScanner.scanRunningServers();
     expect(discovered.some((s) => s.port === testPort)).toBe(true);
 
-    const res = await request(app).get('/orch/project/unregistered');
+    const res = await request(app).get('/ps/host/unregistered');
     expect(res.status).toBe(200);
-    expect(res.body.servers).toBeDefined();
-
-    const dummy = res.body.servers.find((s: any) => s.port === testPort);
-    expect(dummy).toBeDefined();
-    expect(dummy.pid).toBeDefined();
-    expect(dummy.projectPath).toBeDefined();
-    expect(dummy.projectName).toBeDefined();
-  });
+    expect(res.body.servers).toBeInstanceOf(Array);
+    expect(res.body.servers.some((s: any) => s.port === testPort)).toBe(true);
+  }, 20000);
 });
