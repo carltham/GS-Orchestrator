@@ -3,6 +3,10 @@ import { ClientState } from '../models/ClientState';
 import { LoggerView } from '../views/LoggerView';
 import { TelemetryView, SubSystemInfo } from '../views/TelemetryView';
 
+export interface ProcessRegistration {
+  ports: Record<string, number>;
+}
+
 export class TelemetryProcessor {
   private state: ClientState;
   private logger: LoggerView;
@@ -33,7 +37,7 @@ export class TelemetryProcessor {
       // Decoupled registration flow: Trigger remote registration strictly targeting `:9999` once components are up & healthy!
       if (statusStr === 'RUNNING' && !this.state.isRegistered) {
         this.logger.log(`Local components verified healthy (RUNNING). Invoking dynamic registration...`);
-        await this.registerWithProcessServer();
+        await this.registerWithProcessServer(this.state.adapter?.getServiceTypes?.());
       }
 
       const payload = this.telemetry.formatHeartbeat(statusStr, pidNum, rawComponents);
@@ -57,9 +61,9 @@ export class TelemetryProcessor {
   /**
    * Issue startup registration to Process Server on port 9999.
    */
-  public async registerWithProcessServer(): Promise<boolean> {
+  public async registerWithProcessServer(serviceTypes?: Record<string, string>): Promise<ProcessRegistration | null> {
     try {
-      const payload = this.telemetry.formatRegistration();
+      const payload = this.telemetry.formatRegistration(serviceTypes);
       this.logger.log(`Registering local project with ProcessServer registry at: ${this.state.processServerUrl}...`);
 
       const res = await fetch(`${this.state.processServerUrl}/ps/project/register`, {
@@ -69,17 +73,17 @@ export class TelemetryProcessor {
       });
 
       if (res.ok) {
-        const data = await res.json() as any;
+        const data = await res.json() as ProcessRegistration;
         this.logger.log(`Registered successfully down on ProcessServer. Assigned ports: ${JSON.stringify(data.ports)}`);
         this.state.isRegistered = true;
-        return true;
+        return data;
       } else {
         this.logger.log(`Registration with ProcessServer failed with code: ${res.status}`, 'WARN');
-        return false;
+        return null;
       }
     } catch (err: any) {
       this.logger.log(`Could not connect to target ProcessServer for registration: ${err.message}`, 'WARN');
-      return false;
+      return null;
     }
   }
 }

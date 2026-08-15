@@ -33,7 +33,10 @@ export class LauncherController {
     if (this.state.adapter) {
       this.logger.log(`Launching target processes via local ProcessAdapter...`);
       try {
-        await this.state.adapter.start();
+        const registration = await this.telemetryProcessor.registerWithProcessServer(
+          this.state.adapter.getServiceTypes?.()
+        );
+        await this.state.adapter.start(registration?.ports);
         this.logger.log(`Target process launch initiated successfully.`);
       } catch (err: any) {
         this.logger.log(`Failed to start processes via adapter: ${err.message}`, 'ERROR');

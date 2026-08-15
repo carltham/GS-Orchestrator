@@ -13,6 +13,7 @@ export interface IProcessStatus {
 }
 
 export interface IProcessAdapter {
+  getServiceTypes?(): Record<string, string>;
   start(ports?: { [key: string]: number }): Promise<void>;
   stop(): Promise<void>;
   getStatus(): Promise<IProcessStatus>;

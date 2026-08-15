@@ -52,71 +52,58 @@ export function prepareSelectedProject(
   if (services.database) {
     copyFolderRecursiveSync(path.join(srcTemplatesDir, 'simulated-filedb-template'), path.join(testAppDir, 'filedb'));
   }
+
+  const projectName = path.basename(testAppDir);
+  const serviceTypes: Record<string, string> = {};
+  if (services.frontend) serviceTypes.frontend = 'frontend';
+  if (services.backend) serviceTypes.backend = 'backend';
+  if (services.database) serviceTypes.database = 'database';
+
+  fs.copyFileSync(
+    path.join(workspaceRoot, 'testing', 'templates', 'simulated-client', 'ProcessAdapter.js'),
+    path.join(testAppDir, 'ProcessAdapter.js')
+  );
+  fs.writeFileSync(path.join(testAppDir, 'package.json'), JSON.stringify({
+    name: projectName,
+    private: true,
+    scripts: {
+      start: 'node ../../../lib/process-client/dist/index.js'
+    }
+  }, null, 2));
+
+  const configDir = path.join(testAppDir, 'config');
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(configDir, 'simulated-services.json'),
+    JSON.stringify(serviceTypes, null, 2)
+  );
+  fs.writeFileSync(
+    path.join(configDir, 'sys-config.json'),
+    JSON.stringify({ pollIntervalMs: 100, heartbeatIntervalMs: 100 }, null, 2)
+  );
 }
 
 /**
- * Spawns any selected subset of processes based on configuration.
+ * Spawns the real ProcessClient, which loads the generated project's adapter.
  */
-export function spawnSimulatedMicroservices(
-  testAppDir: string,
-  ports: { frontend?: number; backend?: number; database?: number }
-): ChildProcess[] {
-  const spawned: ChildProcess[] = [];
-
-  // Spawn FileDB Template microservice if database port is configured
-  if (ports.database && fs.existsSync(path.join(testAppDir, 'filedb'))) {
-    const fileDbProc = spawn('node', ['server.js'], {
-      cwd: path.join(testAppDir, 'filedb'),
-      env: {
-        ...process.env,
-        PORT: String(ports.database),
-        DB_FILE: path.join(testAppDir, 'filedb', 'data', 'store.json')
-      }
-    });
-    spawned.push(fileDbProc);
-  }
-
-  // Spawn Backend Template microservice if backend port is configured
-  if (ports.backend && fs.existsSync(path.join(testAppDir, 'backend'))) {
-    const backendProc = spawn('node', ['server.js'], {
-      cwd: path.join(testAppDir, 'backend'),
-      env: {
-        ...process.env,
-        PORT: String(ports.backend),
-        database: ports.database ? String(ports.database) : ''
-      }
-    });
-    spawned.push(backendProc);
-  }
-
-  // Spawn Frontend Template microservice if frontend port is configured
-  if (ports.frontend && fs.existsSync(path.join(testAppDir, 'frontend'))) {
-    const frontendProc = spawn('node', ['server.js'], {
-      cwd: path.join(testAppDir, 'frontend'),
-      env: {
-        ...process.env,
-        PORT: String(ports.frontend),
-        backend: ports.backend ? String(ports.backend) : ''
-      }
-    });
-    spawned.push(frontendProc);
-  }
-
-  return spawned;
+export function spawnSimulatedClient(testAppDir: string): ChildProcess {
+  const clientEntryPoint = path.resolve(testAppDir, '..', '..', '..', 'lib', 'process-client', 'dist', 'index.js');
+  return spawn('node', [clientEntryPoint], {
+    cwd: testAppDir,
+    env: process.env,
+    stdio: 'inherit'
+  });
 }
 
 /**
- * Stop spawned processes while preserving generated test app workspaces.
+ * Stop a ProcessClient after its adapter has handled the test's STOP signal.
  */
-export function stopSimulatedMicroservices(spawnedProcesses: ChildProcess[]): void {
-  while (spawnedProcesses.length > 0) {
-    const proc = spawnedProcesses.pop();
-    if (proc) {
-      try {
-        proc.kill('SIGTERM');
-      } catch (e) {
-        // ignore close/stop issues
-      }
+export function stopSimulatedClient(clientProcess: ChildProcess | undefined): void {
+  if (clientProcess) {
+    try {
+      clientProcess.kill('SIGTERM');
+    } catch (e) {
+      // ignore close/stop issues
     }
   }
 }

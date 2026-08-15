@@ -4,8 +4,8 @@ import { ChildProcess } from 'child_process';
 import {
   prepareSelectedProject,
   resetSimulatedAppWorkspace,
-  spawnSimulatedMicroservices,
-  stopSimulatedMicroservices
+  spawnSimulatedClient,
+  stopSimulatedClient
 } from '../../src/SimulatedAppHelper';
 import { verifyStateChange } from '../../src/StateChangeTestTool';
 
@@ -17,8 +17,9 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
   const WORKspaceRoot = path.resolve(__dirname, '../../..');
   const tempAppsDir = path.join(WORKspaceRoot, 'testing', 'temp-apps');
 
-  let spawnedProcesses: ChildProcess[] = [];
+  let clientProcess: ChildProcess | undefined;
   let currentTestAppDir = '';
+  let currentProjectName = '';
 
   beforeAll(() => {
     if (!fs.existsSync(tempAppsDir)) {
@@ -26,8 +27,14 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
     }
   });
 
-  afterEach(() => {
-    stopSimulatedMicroservices(spawnedProcesses);
+  afterEach(async () => {
+    if (currentProjectName && await getClientStatus(currentProjectName) === 'RUNNING') {
+      await queueSignal(currentProjectName, 'STOP');
+      await waitFor(() => getClientStatus(currentProjectName), 'STOPPED');
+    }
+    stopSimulatedClient(clientProcess);
+    clientProcess = undefined;
+    currentProjectName = '';
   });
 
   async function getProjectStatus(projectName: string): Promise<string | undefined> {
@@ -37,6 +44,30 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
     return ((await projectRes.json()) as any).status;
   }
 
+  async function getClientStatus(projectName: string): Promise<string | undefined> {
+    const response = await fetch(`${PROCESS_SERVER_URL}/ps/process/heartbeats`);
+    expect(response.status).toBe(200);
+    const body = await response.json() as any;
+    return body.processes.find((process: any) => process.projectName === projectName)?.status;
+  }
+
+  async function waitFor<T>(readState: () => Promise<T>, expected: T): Promise<void> {
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      if (await readState() === expected) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    expect(await readState()).toBe(expected);
+  }
+
+  async function queueSignal(projectName: string, action: 'START' | 'STOP' | 'DELETE', ports?: Record<string, number>): Promise<Response> {
+    return fetch(`${PROCESS_SERVER_URL}/ps/process/signals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetProject: projectName, action, ports })
+    });
+  }
+
   // Helper run function to test a specific combo in complete isolation
   async function runComboTest(
     comboName: string,
@@ -44,46 +75,27 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
     verifyFn: (ports: { frontend?: number; backend?: number; database?: number }) => Promise<void>
   ) {
     const projectName = `${BASE_PROJECT_NAME}-${comboName}`;
+    currentProjectName = projectName;
     currentTestAppDir = path.join(tempAppsDir, projectName);
 
     // 1. Reset only this combination's workspace, then prepare its folder mapping
     resetSimulatedAppWorkspace(currentTestAppDir);
     prepareSelectedProject(WORKspaceRoot, tempAppsDir, currentTestAppDir, services);
 
-    // 2. Query GS-Orchestrator to register only the selected services
-    const serviceTypes: Record<string, string> = {};
-    if (services.frontend) serviceTypes.frontend = 'frontend';
-    if (services.backend) serviceTypes.backend = 'backend';
-    if (services.database) serviceTypes.database = 'database';
+    // 2. Launch ProcessClient; it registers, receives ports, and starts its adapter.
+    clientProcess = spawnSimulatedClient(currentTestAppDir);
+    await waitFor(() => getClientStatus(projectName), 'RUNNING');
 
-    const registerPayload = {
-      projectName,
-      path: currentTestAppDir,
-      serviceTypes
-    };
+    const projectRes = await fetch(`${PROCESS_SERVER_URL}/ps/project/${projectName}`);
+    expect(projectRes.status).toBe(200);
+    const project = await projectRes.json() as any;
+    const ports: { frontend?: number; backend?: number; database?: number } = {};
+    for (const [componentKey, component] of Object.entries(project.components) as Array<[string, any]>) {
+      ports[componentKey.split('::')[0] as 'frontend' | 'backend' | 'database'] = component.port;
+    }
 
-    const registerRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(registerPayload)
-    });
-
-    expect(registerRes.status).toBe(201);
-    const registerBody = (await registerRes.json()) as any;
-    expect(registerBody.ports).toBeDefined();
-
-    // 3. Spawn only the selected microservices
-    spawnedProcesses = spawnSimulatedMicroservices(currentTestAppDir, {
-      frontend: registerBody.ports.frontend,
-      backend: registerBody.ports.backend,
-      database: registerBody.ports.database
-    });
-
-    // Provide startup window
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // 4. Perform dynamic custom assertions
-    await verifyFn(registerBody.ports);
+    // 3. Perform dynamic custom assertions against client-owned processes.
+    await verifyFn(ports);
   }
 
   // --- Combination 0: Empty Set (No services) ---
@@ -96,57 +108,45 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
 
       await verifyStateChange({
         validatePreState: async () => {
-          expect(await getProjectStatus(projectName)).toBe('running');
+          expect(await getClientStatus(projectName)).toBe('RUNNING');
         },
-        executeStateChange: () => fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}/stop`, {
-          method: 'POST'
-        }),
+        executeStateChange: () => queueSignal(projectName, 'STOP'),
         validatePostState: async (response) => {
-          expect(response.status).toBe(200);
-          expect((await response.json() as any).status).toBe('stopped');
-          expect(await getProjectStatus(projectName)).toBe('stopped');
+          expect(response.status).toBe(201);
+          await waitFor(() => getClientStatus(projectName), 'STOPPED');
         }
       });
 
       await verifyStateChange({
         validatePreState: async () => {
-          expect(await getProjectStatus(projectName)).toBe('stopped');
+          expect(await getClientStatus(projectName)).toBe('STOPPED');
         },
-        executeStateChange: () => fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}/restart`, {
-          method: 'POST'
-        }),
+        executeStateChange: () => queueSignal(projectName, 'START', {}),
         validatePostState: async (response) => {
-          expect(response.status).toBe(200);
-          expect((await response.json() as any).status).toBe('running');
-          expect(await getProjectStatus(projectName)).toBe('running');
+          expect(response.status).toBe(201);
+          await waitFor(() => getClientStatus(projectName), 'RUNNING');
         }
       });
 
       await verifyStateChange({
         validatePreState: async () => {
-          expect(await getProjectStatus(projectName)).toBe('running');
+          expect(await getClientStatus(projectName)).toBe('RUNNING');
         },
-        executeStateChange: () => fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}/stop`, {
-          method: 'POST'
-        }),
+        executeStateChange: () => queueSignal(projectName, 'STOP'),
         validatePostState: async (response) => {
-          expect(response.status).toBe(200);
-          expect((await response.json() as any).status).toBe('stopped');
-          expect(await getProjectStatus(projectName)).toBe('stopped');
+          expect(response.status).toBe(201);
+          await waitFor(() => getClientStatus(projectName), 'STOPPED');
         }
       });
 
       await verifyStateChange({
         validatePreState: async () => {
-          expect(await getProjectStatus(projectName)).toBe('stopped');
+          expect(await getClientStatus(projectName)).toBe('STOPPED');
         },
-        executeStateChange: () => fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}`, {
-          method: 'DELETE'
-        }),
+        executeStateChange: () => queueSignal(projectName, 'DELETE'),
         validatePostState: async (response) => {
-          expect(response.status).toBe(200);
-          expect((await response.json() as any).status).toBe('unregistered');
-          expect(await getProjectStatus(projectName)).toBeUndefined();
+          expect(response.status).toBe(201);
+          await waitFor(() => getProjectStatus(projectName), undefined);
         }
       });
     });

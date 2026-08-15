@@ -42,7 +42,7 @@ export class TelemetryView {
     return {
       projectName: this.state.projectName,
       path: process.cwd(),
-      serviceTypes: serviceTypes || { backend: 'node-ts', frontend: 'angular' }
+      serviceTypes: serviceTypes || this.state.adapter?.getServiceTypes?.() || { backend: 'node-ts', frontend: 'angular' }
     };
   }
 }
