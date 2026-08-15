@@ -1,17 +1,22 @@
 {
   "projects": {
-    "SIT-Combo-App-EmptySet": {
-      "name": "SIT-Combo-App-EmptySet",
-      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-EmptySet",
-      "registeredAt": "2026-08-15T07:28:58.076Z",
-      "components": {},
-      "status": "running",
-      "ticket": "ticket-1786778938076-a5fefe30"
+    "SIT-Combo-App-DBOnly": {
+      "name": "SIT-Combo-App-DBOnly",
+      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-DBOnly",
+      "registeredAt": "2026-08-15T09:16:53.780Z",
+      "components": {
+        "database::database": {
+          "port": 5433,
+          "status": "running"
+        }
+      },
+      "status": "stopped",
+      "ticket": "ticket-1786785413776-849671f9"
     },
     "SIT-Combo-App-BackendOnly": {
       "name": "SIT-Combo-App-BackendOnly",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-BackendOnly",
-      "registeredAt": "2026-08-15T07:29:00.168Z",
+      "registeredAt": "2026-08-15T09:16:54.844Z",
       "components": {
         "backend::backend": {
           "port": 8080,
@@ -19,12 +24,12 @@
         }
       },
       "status": "stopped",
-      "ticket": "ticket-1786778940168-693f46d6"
+      "ticket": "ticket-1786785414843-1eaca1b9"
     },
     "SIT-Combo-App-FrontendOnly": {
       "name": "SIT-Combo-App-FrontendOnly",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-FrontendOnly",
-      "registeredAt": "2026-08-15T07:29:01.214Z",
+      "registeredAt": "2026-08-15T09:16:55.900Z",
       "components": {
         "frontend::frontend": {
           "port": 9001,
@@ -32,12 +37,12 @@
         }
       },
       "status": "stopped",
-      "ticket": "ticket-1786778941214-48beb60b"
+      "ticket": "ticket-1786785415895-394aeeef"
     },
     "SIT-Combo-App-BackendAndDB": {
       "name": "SIT-Combo-App-BackendAndDB",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-BackendAndDB",
-      "registeredAt": "2026-08-15T07:29:02.261Z",
+      "registeredAt": "2026-08-15T09:16:56.962Z",
       "components": {
         "backend::backend": {
           "port": 8081,
@@ -49,12 +54,12 @@
         }
       },
       "status": "stopped",
-      "ticket": "ticket-1786778942261-c16bb09b"
+      "ticket": "ticket-1786785416959-81a84f43"
     },
     "SIT-Combo-App-FrontendAndBackend": {
       "name": "SIT-Combo-App-FrontendAndBackend",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-FrontendAndBackend",
-      "registeredAt": "2026-08-15T07:29:03.342Z",
+      "registeredAt": "2026-08-15T09:16:58.099Z",
       "components": {
         "frontend::frontend": {
           "port": 9002,
@@ -66,12 +71,12 @@
         }
       },
       "status": "stopped",
-      "ticket": "ticket-1786778943342-3d7a16fb"
+      "ticket": "ticket-1786785418094-50ae0c19"
     },
     "SIT-Combo-App-FrontendAndDB": {
       "name": "SIT-Combo-App-FrontendAndDB",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-FrontendAndDB",
-      "registeredAt": "2026-08-15T07:29:04.402Z",
+      "registeredAt": "2026-08-15T09:16:59.180Z",
       "components": {
         "frontend::frontend": {
           "port": 9003,
@@ -83,12 +88,12 @@
         }
       },
       "status": "stopped",
-      "ticket": "ticket-1786778944402-16539ed6"
+      "ticket": "ticket-1786785419176-b9d2366a"
     },
     "SIT-Combo-App-FullIntegrated": {
       "name": "SIT-Combo-App-FullIntegrated",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-FullIntegrated",
-      "registeredAt": "2026-08-15T07:29:05.482Z",
+      "registeredAt": "2026-08-15T09:17:00.255Z",
       "components": {
         "frontend::frontend": {
           "port": 9004,
@@ -104,12 +109,29 @@
         }
       },
       "status": "stopped",
-      "ticket": "ticket-1786778945482-5cf35375"
+      "ticket": "ticket-1786785420250-66e69fc7"
+    },
+    "SIT-Fresh-Verification-App": {
+      "name": "SIT-Fresh-Verification-App",
+      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
+      "registeredAt": "2026-08-15T09:17:02.208Z",
+      "components": {
+        "backend::node-ts": {
+          "port": 3000,
+          "status": "running"
+        },
+        "frontend::angular": {
+          "port": 9005,
+          "status": "running"
+        }
+      },
+      "status": "stopped",
+      "ticket": "ticket-1786785422202-ae0d6c93"
     },
     "GS-Orchestrator": {
       "name": "GS-Orchestrator",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
-      "registeredAt": "2026-08-15T08:41:04.911Z",
+      "registeredAt": "2026-08-15T09:17:10.173Z",
       "components": {
         "backend::node-ts": {
           "port": 10000,
@@ -121,12 +143,12 @@
         }
       },
       "status": "running",
-      "ticket": "ticket-1786778946782-4a88c1ed"
+      "ticket": "ticket-1786785422311-93805f09"
     },
     "GUI-Simulated-Combo-App": {
       "name": "GUI-Simulated-Combo-App",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/dynamic-combo-app",
-      "registeredAt": "2026-08-15T08:41:04.980Z",
+      "registeredAt": "2026-08-15T09:17:10.259Z",
       "components": {
         "backend::node-ts": {
           "port": 3001,
@@ -138,12 +160,12 @@
         }
       },
       "status": "stopped",
-      "ticket": "ticket-1786778954058-436f623e"
+      "ticket": "ticket-1786785429877-e1e3ef4b"
     },
-    "GUI-Full-Lifecycle-App": {
-      "name": "GUI-Full-Lifecycle-App",
-      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/lifecycle-app",
-      "registeredAt": "2026-08-15T08:41:05.744Z",
+    "GUI-State-Change-App": {
+      "name": "GUI-State-Change-App",
+      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/state-change-app",
+      "registeredAt": "2026-08-15T09:17:11.025Z",
       "components": {
         "backend::node-ts": {
           "port": 3002,
@@ -155,9 +177,9 @@
         }
       },
       "status": "stopped",
-      "ticket": "ticket-1786778955112-5c4f7a18"
+      "ticket": "ticket-1786785430955-6961c098"
     }
   },
   "nextPortBase": 4200,
-  "lastUpdated": "2026-08-15T08:41:06.632Z"
+  "lastUpdated": "2026-08-15T09:17:18.801Z"
 }

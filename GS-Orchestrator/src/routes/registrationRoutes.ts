@@ -33,14 +33,24 @@ export function createRegistrationRoutes(
         });
       }
 
-      // Queue a DELETE signal for the client via Process Server
-      await fetch('http://localhost:9999/ps/process/signals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetProject: projectName, action: 'DELETE' })
-      }).catch(err => {
-        console.warn(`⚠️ Could not post DELETE signal to Process Server: ${err.message}`);
-      });
+      const project = registry.getProject(projectName);
+      if (!project) {
+        return res.status(404).json({
+          error: sysConfig.formatError('projectNotFound', { projectName }),
+        });
+      }
+
+      const hasComponents = Object.keys(project.components || {}).length > 0;
+      if (hasComponents) {
+        // Queue a DELETE signal for the client via Process Server
+        await fetch('http://localhost:9999/ps/process/signals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetProject: projectName, action: 'DELETE' })
+        }).catch(err => {
+          console.warn(`⚠️ Could not post DELETE signal to Process Server: ${err.message}`);
+        });
+      }
 
       // Remove from local Orchestrator registry if present
       registry.unregisterProject(projectName);
@@ -50,9 +60,11 @@ export function createRegistrationRoutes(
         method: 'DELETE'
       }).catch(() => {});
 
-      console.log(`🗑️ Project "${projectName}" unregistration requested. DELETE signal queued for client.`);
+      console.log(`🗑️ Project "${projectName}" unregistered${hasComponents ? ' and DELETE signal queued for client' : ''}.`);
       return res.json({
-        message: `Project "${projectName}" unregistration requested. DELETE signal queued for client.`,
+        message: hasComponents
+          ? `Project "${projectName}" unregistration requested. DELETE signal queued for client.`
+          : `Project "${projectName}" unregistered.`,
         projectName,
         status: 'unregistered',
         timestamp: new Date().toISOString(),
@@ -84,14 +96,16 @@ export function createRegistrationRoutes(
         });
       }
 
-      project.status = 'starting';
+      const hasComponents = Object.keys(project.components || {}).length > 0;
+      const nextStatus = hasComponents ? 'starting' : 'running';
+      project.status = nextStatus;
       registry.updateProject(projectName, project);
 
       // Sync status to Process Server (:9999)
       await fetch(`http://localhost:9999/ps/project/${encodeURIComponent(projectName)}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'starting' })
+        body: JSON.stringify({ status: nextStatus })
       }).catch(() => {});
 
       // Extract ports for the START signal
@@ -103,24 +117,28 @@ export function createRegistrationRoutes(
         }
       }
 
-      // Queue START signal on ProcessServer
-      await fetch('http://localhost:9999/ps/process/signals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetProject: projectName,
-          action: 'START',
-          ports
-        })
-      }).catch(err => {
-        console.warn(`⚠️ Could not post START signal to Process Server: ${err.message}`);
-      });
+      if (hasComponents) {
+        // Queue START signal on ProcessServer
+        await fetch('http://localhost:9999/ps/process/signals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetProject: projectName,
+            action: 'START',
+            ports
+          })
+        }).catch(err => {
+          console.warn(`⚠️ Could not post START signal to Process Server: ${err.message}`);
+        });
+      }
 
-      console.log(`🚀 Project "${projectName}" restart initiated. START signal queued for client.`);
+      console.log(`🚀 Project "${projectName}" status changed to ${nextStatus}${hasComponents ? '. START signal queued for client.' : '.'}`);
       return res.json({
-        message: `Project "${projectName}" restart initiated. START signal queued for client.`,
+        message: hasComponents
+          ? `Project "${projectName}" restart initiated. START signal queued for client.`
+          : `Project "${projectName}" resumed immediately because it has no components.`,
         projectName,
-        status: 'starting',
+        status: nextStatus,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -149,42 +167,45 @@ export function createRegistrationRoutes(
         });
       }
 
-      // Update project status to 'stopping'
       const project = registry.getProject(projectName);
-      if (project) {
-        project.status = 'stopping';
-        registry.updateProject(projectName, project);
+      if (!project) {
+        return res.status(404).json({
+          error: sysConfig.formatError('projectNotFound', { projectName }),
+        });
       }
+
+      const hasComponents = Object.keys(project.components || {}).length > 0;
+      const nextStatus = hasComponents ? 'stopping' : 'stopped';
+      project.status = nextStatus;
+      registry.updateProject(projectName, project);
 
       // Sync status to Process Server (:9999)
       await fetch(`http://localhost:9999/ps/project/${encodeURIComponent(projectName)}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'stopping' })
+        body: JSON.stringify({ status: nextStatus })
       }).catch(() => {});
 
-      // Queue a stop signal for the client via Process Server
-      await fetch('http://localhost:9999/ps/process/signals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetProject: projectName, action: 'STOP' })
-      }).catch(err => {
-        console.warn(`⚠️ Could not post STOP signal to Process Server: ${err.message}`);
-      });
-
-      if (project) {
-        console.log(`🛑 Project "${projectName}" status changed to stopping. Stop signal queued for client.`);
-        return res.json({
-          message: `Project "${projectName}" is stopping. Stop signal queued for client.`,
-          projectName,
-          status: 'stopping',
-          timestamp: new Date().toISOString(),
-        });
-      } else {
-        return res.status(404).json({
-          error: sysConfig.formatError('projectNotFound', { projectName }),
+      if (hasComponents) {
+        // Queue a stop signal for the client via Process Server
+        await fetch('http://localhost:9999/ps/process/signals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetProject: projectName, action: 'STOP' })
+        }).catch(err => {
+          console.warn(`⚠️ Could not post STOP signal to Process Server: ${err.message}`);
         });
       }
+
+      console.log(`🛑 Project "${projectName}" status changed to ${nextStatus}.`);
+      return res.json({
+        message: hasComponents
+          ? `Project "${projectName}" is stopping. Stop signal queued for client.`
+          : `Project "${projectName}" stopped immediately because it has no components.`,
+        projectName,
+        status: nextStatus,
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Stop error:', error);
       res.status(500).json({

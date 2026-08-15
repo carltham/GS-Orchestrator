@@ -3,12 +3,15 @@ import * as path from 'path';
 import { ChildProcess } from 'child_process';
 import {
   prepareSelectedProject,
+  resetSimulatedAppWorkspace,
   spawnSimulatedMicroservices,
-  teardownSimulatedMicroservices
+  stopSimulatedMicroservices
 } from '../../src/SimulatedAppHelper';
+import { verifyStateChange } from '../../src/StateChangeTestTool';
 
 describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () => {
   const ORCHESTRATOR_URL = 'http://localhost:10000';
+  const PROCESS_SERVER_URL = 'http://localhost:9999';
   const BASE_PROJECT_NAME = 'SIT-Combo-App';
 
   const WORKspaceRoot = path.resolve(__dirname, '../../..');
@@ -24,8 +27,15 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
   });
 
   afterEach(() => {
-    teardownSimulatedMicroservices(spawnedProcesses, currentTestAppDir);
+    stopSimulatedMicroservices(spawnedProcesses);
   });
+
+  async function getProjectStatus(projectName: string): Promise<string | undefined> {
+    const projectRes = await fetch(`${PROCESS_SERVER_URL}/ps/project/${projectName}`);
+    if (projectRes.status === 404) return undefined;
+    expect(projectRes.status).toBe(200);
+    return ((await projectRes.json()) as any).status;
+  }
 
   // Helper run function to test a specific combo in complete isolation
   async function runComboTest(
@@ -36,7 +46,8 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
     const projectName = `${BASE_PROJECT_NAME}-${comboName}`;
     currentTestAppDir = path.join(tempAppsDir, projectName);
 
-    // 1. Prepare folder mapping
+    // 1. Reset only this combination's workspace, then prepare its folder mapping
+    resetSimulatedAppWorkspace(currentTestAppDir);
     prepareSelectedProject(WORKspaceRoot, tempAppsDir, currentTestAppDir, services);
 
     // 2. Query GS-Orchestrator to register only the selected services
@@ -80,6 +91,64 @@ describe('GS-Orchestrator - Combined Simulated Templates Integration SIT', () =>
     await runComboTest('EmptySet', {}, async (ports) => {
       expect(ports).toBeDefined();
       expect(Object.keys(ports || {})).toHaveLength(0);
+
+      const projectName = `${BASE_PROJECT_NAME}-EmptySet`;
+
+      await verifyStateChange({
+        validatePreState: async () => {
+          expect(await getProjectStatus(projectName)).toBe('running');
+        },
+        executeStateChange: () => fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}/stop`, {
+          method: 'POST'
+        }),
+        validatePostState: async (response) => {
+          expect(response.status).toBe(200);
+          expect((await response.json() as any).status).toBe('stopped');
+          expect(await getProjectStatus(projectName)).toBe('stopped');
+        }
+      });
+
+      await verifyStateChange({
+        validatePreState: async () => {
+          expect(await getProjectStatus(projectName)).toBe('stopped');
+        },
+        executeStateChange: () => fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}/restart`, {
+          method: 'POST'
+        }),
+        validatePostState: async (response) => {
+          expect(response.status).toBe(200);
+          expect((await response.json() as any).status).toBe('running');
+          expect(await getProjectStatus(projectName)).toBe('running');
+        }
+      });
+
+      await verifyStateChange({
+        validatePreState: async () => {
+          expect(await getProjectStatus(projectName)).toBe('running');
+        },
+        executeStateChange: () => fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}/stop`, {
+          method: 'POST'
+        }),
+        validatePostState: async (response) => {
+          expect(response.status).toBe(200);
+          expect((await response.json() as any).status).toBe('stopped');
+          expect(await getProjectStatus(projectName)).toBe('stopped');
+        }
+      });
+
+      await verifyStateChange({
+        validatePreState: async () => {
+          expect(await getProjectStatus(projectName)).toBe('stopped');
+        },
+        executeStateChange: () => fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}`, {
+          method: 'DELETE'
+        }),
+        validatePostState: async (response) => {
+          expect(response.status).toBe(200);
+          expect((await response.json() as any).status).toBe('unregistered');
+          expect(await getProjectStatus(projectName)).toBeUndefined();
+        }
+      });
     });
   });
 

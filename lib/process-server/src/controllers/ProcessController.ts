@@ -26,7 +26,7 @@ export class ProcessController {
 
     if (sysConfig.isProtectedService(targetProject)) {
       if ((action === 'STOP' || action === 'DELETE') && sysConfig.getRules().preventStop) {
-        return res.status(400).json({
+        return res.status(403).json({
           error: sysConfig.formatError('cannotStopSelf', { projectName: targetProject })
         });
       }

@@ -21,6 +21,13 @@ export function copyFolderRecursiveSync(src: string, dest: string): void {
   }
 }
 
+export function resetSimulatedAppWorkspace(testAppDir: string): void {
+  if (fs.existsSync(testAppDir)) {
+    fs.rmSync(testAppDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(testAppDir, { recursive: true });
+}
+
 /**
  * Copies only the chosen service folders into the test directory.
  */
@@ -33,11 +40,6 @@ export function prepareSelectedProject(
   if (!fs.existsSync(tempAppsDir)) {
     fs.mkdirSync(tempAppsDir, { recursive: true });
   }
-
-  if (fs.existsSync(testAppDir)) {
-    fs.rmSync(testAppDir, { recursive: true, force: true });
-  }
-  fs.mkdirSync(testAppDir, { recursive: true });
 
   const srcTemplatesDir = path.join(workspaceRoot, 'testing', 'apps');
 
@@ -104,10 +106,9 @@ export function spawnSimulatedMicroservices(
 }
 
 /**
- * Tear down spawned processes and wipe out temporary directories.
+ * Stop spawned processes while preserving generated test app workspaces.
  */
-export function teardownSimulatedMicroservices(spawnedProcesses: ChildProcess[], testAppDir: string): void {
-  // Kill processes
+export function stopSimulatedMicroservices(spawnedProcesses: ChildProcess[]): void {
   while (spawnedProcesses.length > 0) {
     const proc = spawnedProcesses.pop();
     if (proc) {
@@ -116,15 +117,6 @@ export function teardownSimulatedMicroservices(spawnedProcesses: ChildProcess[],
       } catch (e) {
         // ignore close/stop issues
       }
-    }
-  }
-
-  // Remove directory
-  if (fs.existsSync(testAppDir)) {
-    try {
-      fs.rmSync(testAppDir, { recursive: true, force: true });
-    } catch (err) {
-      console.warn('⚠️ Clear temp app warning:', err);
     }
   }
 }

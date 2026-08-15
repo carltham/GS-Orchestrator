@@ -1,9 +1,76 @@
 import { test, expect } from '@playwright/test';
+import { createServer, Server } from 'node:net';
+import { verifyStateChange } from '../../../src/StateChangeTestTool';
 
 test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () => {
 
   const ORCHESTRATOR_URL = 'http://localhost:10000';
+  const PROCESS_SERVER_URL = 'http://localhost:9999';
   const PROJECT_NAME = 'GUI-Simulated-Combo-App';
+  const runningServers = new Map<number, Server>();
+
+  async function startProjectPorts(ports: Record<string, number>): Promise<void> {
+    for (const port of new Set(Object.values(ports))) {
+      if (runningServers.has(port)) continue;
+
+      const server = createServer((socket) => socket.end());
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(port, '127.0.0.1', () => {
+          runningServers.set(port, server);
+          resolve();
+        });
+      });
+    }
+  }
+
+  async function stopProjectPorts(): Promise<void> {
+    await Promise.all(Array.from(runningServers.values()).map((server) => (
+      new Promise<void>((resolve) => server.close(() => resolve()))
+    )));
+    runningServers.clear();
+  }
+
+  async function assureProjectRunning(projectName: string, projectPath: string): Promise<Record<string, number>> {
+    const registerRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectName,
+        path: projectPath,
+        serviceTypes: { backend: 'node-ts', frontend: 'angular' }
+      })
+    });
+    expect([200, 201]).toContain(registerRes.status);
+    const registration = await registerRes.json() as any;
+
+    await startProjectPorts(registration.ports);
+
+    const restartRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/${projectName}/restart`, {
+      method: 'POST'
+    });
+    expect(restartRes.status).toBe(200);
+
+    const runningRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectName,
+        path: projectPath,
+        serviceTypes: { backend: 'node-ts', frontend: 'angular' }
+      })
+    });
+    expect(runningRes.status).toBe(200);
+
+    return registration.ports;
+  }
+
+  async function getProjectStatus(projectName: string): Promise<string | undefined> {
+    const projectRes = await fetch(`${PROCESS_SERVER_URL}/ps/project/${projectName}`);
+    if (projectRes.status === 404) return undefined;
+    expect(projectRes.status).toBe(200);
+    return ((await projectRes.json()) as any).status;
+  }
 
   test.beforeEach(async ({ page }) => {
     // Ensure 'GUI-Simulated-Combo-App' and 'GS-Orchestrator' are registered in the database
@@ -37,7 +104,17 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
     await page.waitForLoadState('networkidle');
   });
 
+  test.afterEach(async () => {
+    await stopProjectPorts();
+  });
+
   test('should successfully view, stop, and configure a simulated project state through GUI controls', async ({ page }) => {
+    const stateChangeProject = 'GUI-State-Change-App';
+    await assureProjectRunning(
+      stateChangeProject,
+      '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/state-change-app'
+    );
+
     // 1. Authenticate as Thor on localhost
     // Trigger login modal first
     const projectsTab = page.locator('[data-testid="nav-tab-projects"]');
@@ -59,34 +136,39 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
     await page.waitForTimeout(1000);
 
     // Ensure we are truly on the projects page displaying the registered projects table
+    await page.reload();
     await projectsTab.click();
     await page.waitForSelector('[data-testid="registered-projects-table"]');
 
     // 2. Identify Target Simulated Project Row and select status badge to trigger state change modal
-    const targetRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: PROJECT_NAME }) });
+    const targetRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: stateChangeProject }) });
     await expect(targetRow).toBeVisible();
 
     const statusBadge = targetRow.locator('.badge-clickable');
-    
-    // Log details of the target row for debugging purposes
-    const rowText = await targetRow.innerText();
-    const statusTextDetail = await statusBadge.innerText();
-    console.log(`[VERBOSE PLAYWRIGHT DEBUG] Found simulated project row: "${rowText.trim()}"`);
-    console.log(`[VERBOSE PLAYWRIGHT DEBUG] Initial status badge text: "${statusTextDetail.trim()}"`);
 
-    await statusBadge.click();
+    await verifyStateChange({
+      validatePreState: async () => {
+        await expect(statusBadge).toHaveText('running');
+        expect(await getProjectStatus(stateChangeProject)).toBe('running');
+      },
+      executeStateChange: async () => {
+        await statusBadge.click();
+        await expect(page.locator('.modal-content h3')).toContainText('Manage Project State');
+        await page.locator('.btn-danger:has-text("Stop Project")').click();
 
-    // 3. Verify State Management Modal displays
-    const modalHeader = page.locator('.modal-content h3');
-    await expect(modalHeader).toContainText('Manage Project State');
+        const confirmStop = page.locator('button:has-text("Confirm"), .dialog-btn-confirm');
+        await expect(confirmStop).toBeVisible();
+        await confirmStop.click();
 
-    // 4. Trigger Stop Component Process
-    await page.locator('.btn-danger:has-text("Stop Project")').click();
-    await page.waitForTimeout(1000);
-
-    // Verify UI updates status to reflect "stopping" (transition state) or "stopped"
-    const stoppingBadgeText = await statusBadge.textContent();
-    expect(['stopping', 'stopped', 'running']).toContain(stoppingBadgeText?.trim());
+        const okStop = page.locator('button:has-text("OK"), button:has-text("Close")');
+        await expect(okStop).toBeVisible();
+        await stopProjectPorts();
+        await okStop.click();
+      },
+      validatePostState: async () => {
+        await expect.poll(() => getProjectStatus(stateChangeProject)).toBe('stopped');
+      }
+    });
   });
 
   test('should disallow stopping the GS-Orchestrator core service from GUI', async ({ page }) => {
@@ -153,17 +235,10 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
 
   test('should support full GUI lifecycle: start, stop, restart, stop again, and remove project', async ({ page }) => {
     const LIFECYCLE_PROJECT = 'GUI-Full-Lifecycle-App';
+    const lifecyclePath = '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/lifecycle-app';
 
-    // 1. Pre-register the test project via API as running
-    await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        projectName: LIFECYCLE_PROJECT,
-        path: '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/lifecycle-app',
-        serviceTypes: { backend: 'node-ts', frontend: 'angular' }
-      })
-    });
+    // 1. Start the simulated project and verify a real running precondition
+    const lifecyclePorts = await assureProjectRunning(LIFECYCLE_PROJECT, lifecyclePath);
 
     // 2. Authenticate as Thor and open projects page
     const projectsTab = page.locator('[data-testid="nav-tab-projects"]');
@@ -190,6 +265,7 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
     const projectRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: LIFECYCLE_PROJECT }) });
     await expect(projectRow).toBeVisible();
     const statusBadge = projectRow.locator('.badge-clickable');
+    await expect(statusBadge).toHaveText('running');
 
     // --- STEP 1: STOP PROJECT (1st time) ---
     await statusBadge.click();
@@ -202,9 +278,9 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
       await confirmStop1.click();
     }
     const okStop1 = page.locator('button:has-text("OK"), button:has-text("Close")');
-    if (await okStop1.isVisible()) {
-      await okStop1.click();
-    }
+    await expect(okStop1).toBeVisible();
+    await stopProjectPorts();
+    await okStop1.click();
     await page.waitForTimeout(1000);
 
     // Simulate client acknowledging stopped state
@@ -229,10 +305,9 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
       await confirmRestart.click();
     }
     const okRestart = page.locator('button:has-text("OK"), button:has-text("Close")');
-    if (await okRestart.isVisible()) {
-      await okRestart.click();
-    }
-    await page.waitForTimeout(1000);
+    await expect(okRestart).toBeVisible();
+
+    await startProjectPorts(lifecyclePorts);
 
     // Simulate client heartbeating / re-registering back to running
     await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
@@ -240,10 +315,12 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         projectName: LIFECYCLE_PROJECT,
-        path: '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/lifecycle-app',
+        path: lifecyclePath,
         serviceTypes: { backend: 'node-ts', frontend: 'angular' }
       })
     });
+    await okRestart.click();
+    await page.waitForTimeout(1000);
     await page.reload();
     await page.waitForSelector('[data-testid="registered-projects-table"]');
 
@@ -259,9 +336,9 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
       await confirmStop2.click();
     }
     const okStop2 = page.locator('button:has-text("OK"), button:has-text("Close")');
-    if (await okStop2.isVisible()) {
-      await okStop2.click();
-    }
+    await expect(okStop2).toBeVisible();
+    await stopProjectPorts();
+    await okStop2.click();
     await page.waitForTimeout(1000);
 
     // Simulate client confirming stopped
