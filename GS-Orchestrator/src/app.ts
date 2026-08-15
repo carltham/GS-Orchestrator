@@ -4,14 +4,10 @@
 import express, { Express } from 'express';
 import * as path from 'path';
 import { createHealthRoutes } from './routes/healthRoutes';
-import { createRegistrationRoutes } from './routes/registrationRoutes';
-import { createRegistryRoutes } from './routes/registryRoutes';
-import { createScannerRoutes } from './routes/scannerRoutes';
+import { createProxyRoutes } from './routes/proxyRoutes';
 import { createAuthRoutes } from './routes/authRoutes';
 import { createAdminRoutes } from './routes/adminRoutes';
 import { RegistryService } from './services/RegistryService';
-import { ServerScannerService } from './services/ServerScannerService';
-import { PortAllocatorService } from './services/PortAllocatorService';
 import { UserService } from './services/UserService';
 
 export function prepareCors(expressApp: Express): void {
@@ -30,17 +26,12 @@ export function prepareRoutes(
   expressApp: Express,
   userService: UserService,
   registry: RegistryService,
-  port: number,
-  portAllocator: PortAllocatorService,
-  serverScanner: ServerScannerService,
-  selfProjectName: string
+  port: number
 ): void {
   expressApp.use('/orch/auth', createAuthRoutes(userService));
   expressApp.use('/orch/admin', createAdminRoutes(userService));
   expressApp.use(createHealthRoutes(registry, port));
-  expressApp.use(createRegistrationRoutes(registry, portAllocator, serverScanner, selfProjectName));
-  expressApp.use(createRegistryRoutes(registry, serverScanner));
-  expressApp.use(createScannerRoutes(serverScanner));
+  expressApp.use(createProxyRoutes());
 }
 
 export function prepareStaticAssets(expressApp: Express): void {

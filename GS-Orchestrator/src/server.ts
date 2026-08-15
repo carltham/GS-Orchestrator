@@ -23,35 +23,20 @@ const usersPath = path.join(__dirname, '..', '..', 'db', 'users.json');
 
 // Core Domain Services (Singletons)
 const registry = new RegistryService(registryPath);
-const serverScanner = new ServerScannerService(unregisteredPath, registry);
-const portAllocator = new PortAllocatorService(registry, serverScanner);
 const userService = new UserService(usersPath);
 
 // Configure the container / express app controller middleware
 prepareCors(app);
 app.use(express.json());
-prepareRoutes(app, userService, registry, PORT, portAllocator, serverScanner, SELF_PROJECT_NAME);
+prepareRoutes(app, userService, registry, PORT);
 prepareStaticAssets(app);
 
 // Server Spawning & Active Port Listen
 if (require.main === module) {
   app.listen(PORT, async () => {
     showBanner(PORT, registryPath, unregisteredPath, usersPath);
-    try {
-      const discovered = await serverScanner.scanRunningServers();
-      if (discovered.length > 0) {
-        console.log(`⚠️  Detected ${discovered.length} unregistered running server(s):`);
-        discovered.forEach((s) => console.log(`   - Port ${s.port} (${s.type})`));
-      } else {
-        console.log(`✅ No unregistered running servers detected`);
-      }
-    } catch (err) {
-      console.error('Error during startup server scan:', err);
-    }
-
-    serverScanner.startPeriodicScan(30000);
   });
 }
 
 // Exportable instance bindings (preserved exports for tests/consumers)
-export { app, registry, serverScanner, portAllocator, userService };
+export { app, registry, userService };

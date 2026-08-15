@@ -64,109 +64,11 @@ export class ServerScannerService {
   }
 
   /**
-   * Check if a list of ports are in use via remote Process Server check-ports endpoint
-   */
-  public async checkPortsOccupied(ports: number[]): Promise<Record<number, boolean>> {
-    try {
-      const res = await fetch('http://localhost:9999/ps/host/check-ports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ports })
-      });
-      if (res.ok) {
-        const body = await res.json() as any;
-        return body.ports || {};
-      }
-    } catch (err) {
-      console.warn(`⚠️ Could not reach Process Server check-ports: ${(err as Error).message}`);
-    }
-
-    // Fallback: Default to unoccupied if Process Server is down (avoids locking registry)
-    const fallback: Record<number, boolean> = {};
-    for (const port of ports) {
-      fallback[port] = false;
-    }
-    return fallback;
-  }
-
-  /**
-   * Scan common port ranges for running servers
+   * Scan running servers using local registry state
    */
   public async scanRunningServers(): Promise<UnregisteredServer[]> {
-    const registryData = this.registry.getState();
-
-    // 1. Gather all registered query ports to verify active status
-    const allRegisteredPorts: number[] = [];
-    const registeredProjectNames: string[] = [];
-
-    for (const [projName, proj] of Object.entries(registryData.projects)) {
-      if (!proj.components || Object.keys(proj.components).length === 0) continue;
-      registeredProjectNames.push(projName);
-      for (const info of Object.values(proj.components)) {
-        allRegisteredPorts.push(info.port);
-      }
-    }
-
-    // Single remote batch HTTP check instead of launching native processes or consecutive TCP sockets
-    const portsOccupiedMap = await this.checkPortsOccupied(allRegisteredPorts);
-
-    // Update statuses for all projects
-    for (const projName of registeredProjectNames) {
-      const proj = registryData.projects[projName];
-      let occupiedCount = 0;
-      const totalPorts = Object.keys(proj.components).length;
-
-      for (const info of Object.values(proj.components)) {
-        if (portsOccupiedMap[info.port]) {
-          occupiedCount++;
-        }
-      }
-
-      let newStatus: 'running' | 'partially' | 'stopped' = 'stopped';
-      if (occupiedCount === totalPorts) {
-        newStatus = 'running';
-      } else if (occupiedCount > 0) {
-        newStatus = 'partially';
-      }
-
-      // Update status if it changed or if project was stuck in a stopping state while ports are active
-      if (proj.status !== newStatus || (proj.status as string) === 'stopping') {
-        proj.status = newStatus;
-        this.registry.updateProject(projName, proj);
-      }
-    }
-
-    // 2. Query Process Server host scanner with excluded registered ports/directories
-    const registeredPortsArray: number[] = [];
-    const registeredProjectPaths: string[] = [];
-    const refreshedRegistry = this.registry.getState();
-
-    for (const proj of Object.values(refreshedRegistry.projects)) {
-      if (proj.path) {
-        registeredProjectPaths.push(proj.path);
-      }
-      if (proj.components) {
-        for (const info of Object.values(proj.components)) {
-          registeredPortsArray.push(info.port);
-        }
-      }
-    }
-
-    let detectedServers: UnregisteredServer[] = [];
-    try {
-      const portsParam = encodeURIComponent(registeredPortsArray.join(','));
-      const pathsParam = encodeURIComponent(registeredProjectPaths.join(','));
-      const res = await fetch(`http://localhost:9999/ps/host/unregistered?registeredPorts=${portsParam}&registeredPaths=${pathsParam}`);
-      if (res.ok) {
-        const body = await res.json() as any;
-        detectedServers = body.servers || [];
-      }
-    } catch (err) {
-      console.warn(`⚠️ Could not reach Process Server host scanner: ${(err as Error).message}`);
-    }
-
-    this.saveData(detectedServers);
-    return detectedServers;
+    const data = this.loadData();
+    return data.servers || [];
   }
 
   /**

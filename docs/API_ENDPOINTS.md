@@ -57,21 +57,3 @@ This document lists all active HTTP API endpoints across **ProcessServer** (`:99
 | `POST` | `/admin/users/:id/enable` | Enable user account | `SUPERADMIN` |
 | `POST` | `/admin/users/:id/change-password` | Change user password | `SUPERADMIN` |
 
----
-
-## 🔄 Relayed API Calls (GS-Orchestrator `:10000` ➔ ProcessServer `:9999`)
-
-The following calls are received by `GS-Orchestrator` and internally relayed or delegated to `ProcessServer`:
-
-| Inbound Orchestrator Call (`:10000`) | Trigger / Origin | Relayed ProcessServer Call (`:9999`) | Purpose |
-|---|---|---|---|
-| `GET /orch/project/registry` | Frontend / GUI | `GET /ps/project/list` | Sync and retrieve active project allocations & port bindings |
-| `GET /orch/project/count` | Frontend / GUI | `GET /ps/project/list` | Calculate registered project count from master registry |
-| `POST /orch/project/register` | Client / GUI | `POST /ps/project/register` | Forward project registration & dynamic port allocation to ProcessServer |
-| `POST /orch/project/:name/start` | Frontend / GUI | `POST /ps/process/signals`<br>`PATCH /ps/project/:name/status` | Queue `START` lifecycle signal and mark project status `running` |
-| `POST /orch/project/:name/stop` | Frontend / GUI | `POST /ps/process/signals`<br>`PATCH /ps/project/:name/status` | Queue `STOP` lifecycle signal and mark project status `stopping` |
-| `POST /orch/project/:name/restart` | Frontend / GUI | `POST /ps/process/signals`<br>`PATCH /ps/project/:name/status` | Queue `STOP` + `START` lifecycle signals |
-| `DELETE /orch/project/:name` | Frontend / GUI | `POST /ps/process/signals`<br>`DELETE /ps/project/:name` | Queue `DELETE` signal and unregister project from master registry |
-| Background Periodic Scan | Orchestrator Scanner (30s) | `POST /ps/host/check-ports` | Batch socket occupancy check for registered component ports |
-| `GET /orch/project/unregistered` | Orchestrator Scanner / GUI | `GET /ps/host/unregistered` | Query low-level host OS socket scanner (`ss`/`lsof`) excluding known ports |
-
