@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AppStateService, AppState } from '../../../services/app-state.service';
 import { OrchestratorService, ProjectEntry } from '../../../orchestrator.service';
 import { DialogService } from '../../../services/dialog.service';
@@ -8,13 +9,15 @@ import { StateModalComponent } from '../../modals/state-modal/state-modal.compon
 @Component({
   selector: 'app-projects-page',
   standalone: true,
-  imports: [CommonModule, StateModalComponent],
+  imports: [CommonModule, FormsModule, StateModalComponent],
   templateUrl: './projects-page.component.html',
   styleUrls: ['./projects-page.component.css']
 })
 export class ProjectsPageComponent implements OnInit {
   activeTab: string = 'projects';
   projectsList: ProjectEntry[] = [];
+  searchTerm: string = '';
+  statusFilter: string = 'all';
   showStateModal = false;
   selectedProject: ProjectEntry | null = null;
 
@@ -25,9 +28,38 @@ export class ProjectsPageComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const saved = this.appState.getViewState();
+    if (saved.projectsSearch !== undefined) {
+      this.searchTerm = saved.projectsSearch;
+    }
+    if (saved.projectsStatusFilter !== undefined) {
+      this.statusFilter = saved.projectsStatusFilter;
+    }
+
     this.appState.state$.subscribe((state: AppState) => {
       this.activeTab = state.activeTab;
       this.projectsList = state.projectsList;
+    });
+  }
+
+  onSearchChange(): void {
+    this.appState.updateViewState({ projectsSearch: this.searchTerm });
+  }
+
+  onFilterChange(): void {
+    this.appState.updateViewState({ projectsStatusFilter: this.statusFilter });
+  }
+
+  get filteredProjects(): ProjectEntry[] {
+    return this.projectsList.filter(p => {
+      const matchesSearch = !this.searchTerm || 
+        p.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        p.path.toLowerCase().includes(this.searchTerm.toLowerCase());
+      
+      const matchesStatus = this.statusFilter === 'all' || 
+        (p.status || 'running') === this.statusFilter;
+
+      return matchesSearch && matchesStatus;
     });
   }
 
@@ -64,7 +96,7 @@ export class ProjectsPageComponent implements OnInit {
           'Project Stopping'
         );
         this.closeStateModal();
-        setTimeout(() => this.refresh(), 500);
+        setTimeout(() => this.appState.requestRefresh(), 500);
       },
       error: async (err: any) => {
         await this.dialogService.alert(
@@ -92,7 +124,7 @@ export class ProjectsPageComponent implements OnInit {
           'Project Removed'
         );
         this.closeStateModal();
-        setTimeout(() => this.refresh(), 500);
+        setTimeout(() => this.appState.requestRefresh(), 500);
       },
       error: async (err: any) => {
         await this.dialogService.alert(

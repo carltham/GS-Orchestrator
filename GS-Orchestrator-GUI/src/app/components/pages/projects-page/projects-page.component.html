@@ -1,7 +1,31 @@
 <div *ngIf="activeTab === 'projects'" data-testid="page-projects">
   <div class="card" style="margin-bottom: 30px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
       <h3 style="margin: 0;">Registered Projects Registry</h3>
+      
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input 
+          type="text" 
+          placeholder="Filter projects..." 
+          [(ngModel)]="searchTerm" 
+          (ngModelChange)="onSearchChange()" 
+          style="padding: 6px 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: #f8fafc; font-size: 13px; min-width: 180px;"
+          data-testid="projects-search-input"
+        />
+        
+        <select 
+          [(ngModel)]="statusFilter" 
+          (ngModelChange)="onFilterChange()"
+          style="padding: 6px 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: #f8fafc; font-size: 13px;"
+          data-testid="projects-status-filter"
+        >
+          <option value="all">All Statuses</option>
+          <option value="running">Running</option>
+          <option value="partially">Partially</option>
+          <option value="stopping">Stopping</option>
+          <option value="stopped">Stopped</option>
+        </select>
+      </div>
     </div>
 
     <table class="data-table" data-testid="registered-projects-table">
@@ -16,7 +40,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let p of projectsList">
+        <tr *ngFor="let p of filteredProjects">
           <td class="project-name"><strong>{{ p.name }}</strong></td>
           <td><code>{{ p.path }}</code></td>
           <td>
@@ -26,7 +50,7 @@
                 'badge-warning': p.status === 'partially' || p.status === 'starting' || p.status === 'stop',
                 'badge-degraded': p.status === 'stopping' || p.status === 'stopped'
               }"
-1              (click)="!p.status || p.status === 'running' || p.status === 'partially' || p.status === 'stopped' ? openStateModal(p) : null"
+              (click)="!p.status || p.status === 'running' || p.status === 'partially' || p.status === 'stopped' ? openStateModal(p) : null"
               [style.cursor]="!p.status || p.status === 'running' || p.status === 'partially' || p.status === 'stopped' ? 'pointer' : 'default'"
               [title]="!p.status || p.status === 'running' || p.status === 'partially' || p.status === 'stopped' ? 'Click to change state' : 'Project is transitioning'">
               {{ p.status || 'running' }}
@@ -36,9 +60,9 @@
           <td><code>{{ p.ticket || 'N/A' }}</code></td>
           <td>{{ p.registeredAt | date:'medium' }}</td>
         </tr>
-        <tr *ngIf="projectsList.length === 0">
+        <tr *ngIf="filteredProjects.length === 0">
           <td colspan="6" style="text-align: center; color: #94a3b8;">
-            No projects registered yet. Navigate to <strong>Register New Project</strong> to add one.
+            No projects found matching current criteria.
           </td>
         </tr>
       </tbody>

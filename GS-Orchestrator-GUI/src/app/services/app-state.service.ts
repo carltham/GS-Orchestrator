@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { ProjectEntry, UnregisteredServer } from '../orchestrator.service';
+import { getSessionViewState, saveSessionViewState, SessionViewState } from './session-cookie.util';
 
 export interface AppState {
   activeTab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' | 'users';
@@ -8,18 +9,22 @@ export interface AppState {
   orchestratorPort: number;
   projectsList: ProjectEntry[];
   unregisteredServers: UnregisteredServer[];
+  viewState: SessionViewState;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AppStateService {
+  private savedViewState: SessionViewState = getSessionViewState();
+
   private initialState: AppState = {
-    activeTab: 'home',
+    activeTab: this.savedViewState.activeTab || 'home',
     healthStatus: 'Loading...',
-    orchestratorPort: 9000,
+    orchestratorPort: 10000,
     projectsList: [],
-    unregisteredServers: []
+    unregisteredServers: [],
+    viewState: this.savedViewState
   };
 
   private state = new BehaviorSubject<AppState>(this.initialState);
@@ -39,7 +44,19 @@ export class AppStateService {
   }
 
   setActiveTab(tab: 'home' | 'projects' | 'register' | 'unregistered' | 'health' | 'users'): void {
+    this.updateViewState({ activeTab: tab });
     this.updateState({ activeTab: tab });
+  }
+
+  updateViewState(partialView: Partial<SessionViewState>): void {
+    saveSessionViewState(partialView);
+    const current = this.state.value;
+    const newViewState = { ...current.viewState, ...partialView };
+    this.state.next({ ...current, viewState: newViewState });
+  }
+
+  getViewState(): SessionViewState {
+    return this.state.value.viewState;
   }
 
   setHealthStatus(status: string): void {

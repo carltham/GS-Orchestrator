@@ -8,19 +8,6 @@
       "status": "running",
       "ticket": "ticket-1786778938076-a5fefe30"
     },
-    "SIT-Combo-App-DBOnly": {
-      "name": "SIT-Combo-App-DBOnly",
-      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-DBOnly",
-      "registeredAt": "2026-08-15T07:28:59.117Z",
-      "components": {
-        "database::database": {
-          "port": 5433,
-          "status": "running"
-        }
-      },
-      "status": "stopped",
-      "ticket": "ticket-1786778939117-eb3c87b4"
-    },
     "SIT-Combo-App-BackendOnly": {
       "name": "SIT-Combo-App-BackendOnly",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-BackendOnly",
@@ -119,27 +106,10 @@
       "status": "stopped",
       "ticket": "ticket-1786778945482-5cf35375"
     },
-    "SIT-Fresh-Verification-App": {
-      "name": "SIT-Fresh-Verification-App",
-      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
-      "registeredAt": "2026-08-15T07:29:06.750Z",
-      "components": {
-        "backend::node-ts": {
-          "port": 3000,
-          "status": "running"
-        },
-        "frontend::angular": {
-          "port": 9005,
-          "status": "running"
-        }
-      },
-      "status": "stopped",
-      "ticket": "ticket-1786778946711-baef4f6f"
-    },
     "GS-Orchestrator": {
       "name": "GS-Orchestrator",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
-      "registeredAt": "2026-08-15T07:29:14.066Z",
+      "registeredAt": "2026-08-15T08:41:04.911Z",
       "components": {
         "backend::node-ts": {
           "port": 10000,
@@ -156,7 +126,7 @@
     "GUI-Simulated-Combo-App": {
       "name": "GUI-Simulated-Combo-App",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/dynamic-combo-app",
-      "registeredAt": "2026-08-15T07:29:14.130Z",
+      "registeredAt": "2026-08-15T08:41:04.980Z",
       "components": {
         "backend::node-ts": {
           "port": 3001,
@@ -173,7 +143,7 @@
     "GUI-Full-Lifecycle-App": {
       "name": "GUI-Full-Lifecycle-App",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/lifecycle-app",
-      "registeredAt": "2026-08-15T07:29:15.112Z",
+      "registeredAt": "2026-08-15T08:41:05.744Z",
       "components": {
         "backend::node-ts": {
           "port": 3002,
@@ -189,5 +159,5 @@
     }
   },
   "nextPortBase": 4200,
-  "lastUpdated": "2026-08-15T07:29:16.076Z"
+  "lastUpdated": "2026-08-15T08:41:06.632Z"
 }

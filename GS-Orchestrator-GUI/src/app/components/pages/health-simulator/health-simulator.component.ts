@@ -28,6 +28,17 @@ export class HealthSimulatorComponent implements OnInit {
     this.appState.state$.subscribe((state: AppState) => {
       this.activeTab = state.activeTab;
       
+      const saved = this.appState.getViewState();
+      if (saved.selectedHealthProject) {
+        this.projectName = saved.selectedHealthProject;
+      }
+      if (saved.healthSimStatus) {
+        this.statusOption = saved.healthSimStatus;
+      }
+      if (saved.healthSimUptime !== undefined) {
+        this.uptime = saved.healthSimUptime;
+      }
+
       // Build project options list
       const projects = new Set<string>();
       projects.add('GS-Orchestrator');
@@ -51,6 +62,18 @@ export class HealthSimulatorComponent implements OnInit {
         this.projectName = this.availableProjects[0];
       }
     });
+  }
+
+  onProjectChange(): void {
+    this.appState.updateViewState({ selectedHealthProject: this.projectName });
+  }
+
+  onStatusChange(): void {
+    this.appState.updateViewState({ healthSimStatus: this.statusOption });
+  }
+
+  onUptimeChange(): void {
+    this.appState.updateViewState({ healthSimUptime: this.uptime });
   }
 
   sendHealthReport(): void {
