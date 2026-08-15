@@ -1,3 +1,5 @@
+import { HostInfo } from './ProjectEntry';
+
 export class HealthStatus {
   status!: 'ok' | 'degraded' | 'down';
   backendStatus!: boolean;
@@ -15,6 +17,7 @@ export class HealthStatus {
 export class HealthReportPayload {
   projectName!: string;
   health?: HealthStatus;
+  host?: HostInfo;
   timestamp?: string;
 
   constructor(init?: Partial<HealthReportPayload>) {

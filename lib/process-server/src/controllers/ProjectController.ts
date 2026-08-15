@@ -10,6 +10,8 @@ export class ProjectController {
       const projectPath = req.body.path;
       const serviceTypes = req.body.serviceTypes || { backend: 'node-ts', frontend: 'angular' };
       const ticket = req.body.ticket;
+      const host = req.body.host;
+      const occupiedPorts = req.body.occupiedPorts;
 
       if (!projectName || !projectPath) {
         return res.status(400).json({
@@ -17,8 +19,8 @@ export class ProjectController {
         });
       }
 
-      console.log(`[ProcessServer:ProjectController] Incoming registration hook for "${projectName}" at path "${projectPath}"`);
-      const entry = projectRegistry.registerProject(projectName, projectPath, serviceTypes, ticket);
+      console.log(`[ProcessServer:ProjectController] Incoming registration hook for "${projectName}" at path "${projectPath}" (host: ${host?.hostname || 'local'})`);
+      const entry = projectRegistry.registerProject(projectName, projectPath, serviceTypes, ticket, host, occupiedPorts);
 
       // Map components back to ports format expected by standard Process Clients
       const ports: Record<string, number> = {};

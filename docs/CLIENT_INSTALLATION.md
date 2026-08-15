@@ -6,13 +6,32 @@ This target project has been configured for integration with **GS-Orchestrator**
 
 ## 🚀 Quickstart: Running Your Project
 
-To start your project with GS-Orchestrator client support:
-
+### Foreground Mode
 ```bash
 npm start
+# OR
+npx gs-client start
 ```
 
-This launches the `@gs/process-client` engine, which automatically:
+### Background Daemon Mode
+To run `@gs/process-client` as a background daemon:
+
+```bash
+# Start in background
+npx gs-client daemon
+# (or: npx gs-client start -d)
+
+# Check daemon status
+npx gs-client status
+
+# View background logs
+npx gs-client logs
+
+# Stop the daemon
+npx gs-client stop
+```
+
+When started, `@gs/process-client` automatically:
 1. Executes `ProcessAdapter.js` to start local backend, frontend, and database services.
 2. Registers the project with `GS-Orchestrator` (`http://localhost:10000`).
 3. Establishes heartbeat telemetry & signal polling with `ProcessServer` (`http://localhost:9999`).

@@ -38,7 +38,7 @@ The process management engine operates as an independent, standalone microservic
 
 ### Responsibilities
 1. **Host & Serve Installer Scripts**: Serves `GET /install.sh` and `GET /install.js` for `curl` downloads.
-2. **Environment Analysis & Generator Endpoint**: Accepts `POST /api/installer/generate` requests containing environment inspection payloads from consuming projects.
+2. **Environment Analysis & Generator Endpoint**: Accepts `POST /ps/installer/generate` requests containing environment inspection payloads from consuming projects.
 3. **Dynamic Code Generation**: Compiles the inspection metadata and dynamically builds:
    - A tailored, runnable `ProcessAdapter.js` class implementing `IProcessAdapter`.
    - The runtime `@gs/process-client` package configuration files.
@@ -100,7 +100,7 @@ sequenceDiagram
 8. **Client-Driven Registration**: The target project's `ProcessClient` is solely responsible for sending registration requests (`POST /orch/project/register`) to the Orchestrator on startup. The Orchestrator server performs no self-registration.
 9. **Clear Separation of Traffic (Control Plane vs Data Plane)**:
    - **Application Data Traffic**: All user requests, REST API calls, database queries, and frontend-to-backend traffic flow **directly** between consuming application components/clients and their respective servers. Application traffic **never** routes through `ProcessServer`.
-   - **Orchestrator Control Traffic**: Communication with `ProcessServer` (`:9999`) is strictly limited to control-plane operations: installer generation, initial project registration (`/api/register`), port allocation queries, periodic health heartbeats (`/api/health`), and lifecycle control signal polling (`/api/signals`).
+   - **Orchestrator Control Traffic**: Communication with `ProcessServer` (`:9999`) and `GS-Orchestrator` (`:10000`) is strictly limited to control-plane operations: installer generation (`/ps/installer/generate`), project registration (`/orch/project/register`), periodic health heartbeats (`/orch/reporting/project/health`), and lifecycle control signal polling (`/ps/process/signals`).
 10. **Graceful Offline Fallback**: If `ProcessServer` is offline on `http://localhost:9999`, the deployed `ProcessClient` logs a warning, falls back to cached local ports (`config/app-config.json`) or environment variables, spawns local services via `ProcessAdapter.js`, and retries registration in the background.
 11. **Persistent Monitoring Loop**: When a `stop` signal is received from `ProcessServer`, `ProcessClient` terminates child application processes via `ProcessAdapter.js` and notifies `ProcessServer` (`status = stopped`), but keeps the client loop running to listen for future `start` signals.
 12. **Standardized `IProcessAdapter` Interface**: Clean object-oriented contract (`start(ports)`, `stop()`, `getStatus()`) for starting and stopping local project services.
@@ -179,41 +179,25 @@ classDiagram
 sequenceDiagram
     autonumber
     actor CLI as npm start (Project)
-    participant Launcher as OrchestratedLauncher
-    participant API as ApiClient
-    participant Orch as GS-Orchestrator (:9000)
-    participant Config as app-config.json
-    participant Handler as IStartupHandler (Project)
+    participant Launcher as ProcessClient
+    participant Adapter as ProcessAdapter.js
+    participant Server as ProcessServer (:9999)
+    participant Orch as GS-Orchestrator (:10000)
 
     CLI->>Launcher: start()
-    Launcher->>API: checkOrchestratorHealth()
-    
-    alt Orchestrator Online (:9000)
-        API-->>Launcher: true
-        Launcher->>API: register({ projectName, basePorts })
-        API->>Orch: POST /api/register
-        Orch-->>API: Allocated ports { db, backend, frontend }
-        API-->>Launcher: PortConfig
-        Launcher->>Config: writeConfig(PortConfig)
-    else Orchestrator Offline / Unreachable
-        API-->>Launcher: false
-        Launcher->>Config: readConfig() / local defaults
-        note over Launcher: Log: "⚠️ Orchestrator offline, using cached/default ports"
-    end
+    Launcher->>Server: registerWithProcessServer() (POST /ps/project/register)
+    Server-->>Launcher: Allocated ports { database, backend, frontend }
+    Launcher->>Adapter: start(ports)
+    note over Adapter: Launch component processes (FileDB, Backend, Frontend)
+    Launcher->>Server: POST /ps/process/heartbeat (status: RUNNING)
 
-    Launcher->>Handler: start(ports)
-    note over Handler: 1. Launch DB (if needed)<br/>2. Launch Backend -> Wait for /health<br/>3. Launch Frontend
-
-    Launcher->>Launcher: startHeartbeatLoop() & startSignalPollingLoop()
-
-    loop Every 15s (Signal & Health)
-        Launcher->>API: sendHealthReport()
-        Launcher->>API: pollSignals()
-        opt Signal = "stop"
-            Launcher->>Handler: stop()
-            note over Handler: Terminate local backend & frontend
-            Launcher->>API: ackSignal() & confirmStopped()
-            note over Launcher: Launcher remains active to receive restart signals
+    loop Every 15s (Heartbeat & Signal Polling)
+        Launcher->>Server: POST /ps/process/heartbeat
+        Launcher->>Server: GET /ps/process/signals?projectName=:name
+        opt Signal = "STOP"
+            Launcher->>Adapter: stop()
+            note over Adapter: Terminate child processes
+            Launcher->>Server: POST /ps/process/heartbeat (status: STOPPED)
         end
     end
 ```
@@ -222,25 +206,27 @@ sequenceDiagram
 
 ## 📋 Interface Specifications
 
-### `IStartupHandler`
+### `IProcessAdapter`
 ```typescript
-export interface PortConfig {
-  database?: number;
-  backend?: number;
-  frontend?: number;
-  ticket?: string;
+export interface SubSystemInfo {
+  port: number;
+  status: 'start' | 'starting' | 'running' | 'partially' | 'stop' | 'stopping' | 'stopped' | string;
+  pid?: number | null;
+  error?: string;
 }
 
-export interface ComponentStatus {
-  database: 'running' | 'stopped' | 'not_configured';
-  backend: 'running' | 'stopped' | 'not_configured';
-  frontend: 'running' | 'stopped' | 'not_configured';
+export interface IProcessStatus {
+  projectName: string;
+  status: 'STOPPED' | 'RUNNING' | 'ERROR';
+  pid?: number | null;
+  components?: Record<string, SubSystemInfo>;
 }
 
-export interface IStartupHandler {
-  start(ports: PortConfig): Promise<void>;
+export interface IProcessAdapter {
+  getServiceTypes?(): Record<string, string>;
+  start(ports?: { [key: string]: number }): Promise<void>;
   stop(): Promise<void>;
-  getStatus?(): Promise<ComponentStatus>;
+  getStatus(): Promise<IProcessStatus>;
 }
 ```
 
@@ -250,31 +236,31 @@ export interface IStartupHandler {
 
 ```
 GS-Orchestrator Workspace
-├── GS-Orchestrator/                # Main Orchestrator Core Server & Registry (:9000)
-├── GS-Orchestrator-GUI/            # Control Center Angular Frontend (:9001)
+├── GS-Orchestrator/                # Main Orchestrator Core Server & Registry (:10000)
+├── GS-Orchestrator-GUI/            # Control Center Angular Frontend (:9001 dev / :10000 static)
 ├── lib/
-│   ├── orchestrator-generator/     # Standalone Generator Microservice (Option 2)
+│   ├── process-server/             # Standalone ProcessServer Microservice (:9999)
 │   │   ├── src/
-│   │   │   ├── server.ts           # Express server hosting installer & generator endpoints
-│   │   │   ├── generator.ts        # StartupHandler class code compiler
-│   │   │   └── installerScripts/   # Static install.sh and install.js templates
+│   │   │   ├── server.ts           # Express server hosting installer, generator & signal APIs
+│   │   │   ├── generators/         # ProcessAdapter.js code generator
+│   │   │   └── templates/          # Static install.sh and install.js templates
 │   │   ├── package.json
 │   │   └── tsconfig.json
-│   └── orchestrator-client/        # Compiled client package installed into projects
+│   └── process-client/             # ProcessClient runtime engine (@gs/process-client)
 │       ├── src/
 │       │   ├── index.ts            # Client runtime entrypoint
-│       │   ├── launcher/           # OrchestratedLauncher
-│       │   └── api/                # ApiClient (/api/register, /api/health)
+│       │   ├── launcher/           # ProcessClient lifecycle manager
+│       │   └── services/           # TelemetryProcessor & SignalProcessor
 │       └── package.json
 └── architecture/
-    └── NEW_CLIENT_ARCHITECTURE.md  # Architectural Blueprint
+    └── PROCESS_HANDLING_ARCHITECTURE.md
 ```
 
 ---
 
 ## 💡 Key Differences & Design Improvements
 
-1. **Eliminated Fallback Shell Scripts**: Removed `|| node startupHandler.js` from `package.json` to eliminate duplicate execution collisions (`EADDRINUSE`).
+1. **Eliminated Fallback Shell Scripts**: Removed manual startup scripts to prevent port collisions (`EADDRINUSE`).
 2. **Complete Isolation from Orchestrator Server**: No code path inside client projects attempts to spawn or manage `GS-Orchestrator`.
-3. **Graceful Offline Operation**: If `GS-Orchestrator` is down, the client launches local services using cached ports without crashing.
-4. **Clean Abstraction via `IStartupHandler`**: Process spawning and termination logic is cleanly isolated behind a testable class interface.
+3. **Graceful Offline Operation**: If `ProcessServer` is down, the client logs a warning and handles failures gracefully without crashing.
+4. **Clean Abstraction via `IProcessAdapter`**: Process spawning and termination logic is cleanly isolated behind a testable class interface.

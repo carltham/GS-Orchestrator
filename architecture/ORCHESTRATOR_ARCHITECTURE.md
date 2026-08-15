@@ -24,13 +24,12 @@ GS-Orchestrator Workspace
 │   │   ├── server.ts               # Express server entrypoint & static GUI host (:10000)
 │   │   ├── domain/                 # Domain interfaces & TypeScript types
 │   │   ├── routes/                 # Express API routes
-│   │   │   ├── authRoutes.ts       # Authentication endpoints (/api/auth)
-│   │   │   ├── adminRoutes.ts      # User management endpoints (/api/admin)
-│   │   │   ├── healthRoutes.ts     # Project health reports (/api/health)
-│   │   │   ├── registrationRoutes.ts # Project registration & port allocation (/api/register)
-│   │   │   ├── registryRoutes.ts   # Registry querying & management (/api/registry)
-│   │   │   ├── scannerRoutes.ts    # Unregistered server scanner (/api/unregistered)
-│   │   │   └── signalRoutes.ts     # Project lifecycle signals (/api/signals)
+│   │   │   ├── authRoutes.ts       # Authentication endpoints (/auth)
+│   │   │   ├── adminRoutes.ts      # User management endpoints (/admin)
+│   │   │   ├── healthRoutes.ts     # Project health reports (/orch/reporting)
+│   │   │   ├── registrationRoutes.ts # Project registration & port allocation (/orch/project)
+│   │   │   ├── registryRoutes.ts   # Registry querying & management (/orch/project)
+│   │   │   └── scannerRoutes.ts    # Unregistered server scanner (/orch/project/unregistered)
 │   │   ├── services/               # Core business logic services
 │   │   │   ├── PortAllocatorService.ts # Non-conflicting port assignment
 │   │   │   ├── RegistryService.ts      # Persistent project registry state
@@ -79,7 +78,7 @@ graph TD
     Client[Browser / User] -->|HTTP :10000| Express[GS-Orchestrator Express Server]
     
     subgraph GS-Orchestrator Server (:10000)
-        Express -->|/api/*| APIRoutes[API Routes / Domain Services]
+        Express -->|/orch/*, /auth/*, /admin/*| APIRoutes[API Routes / Domain Services]
         Express -->|Static Asset Request| StaticMiddleware[express.static /dist]
         Express -->|SPA Fallback *| IndexHTML[index.html]
     end
@@ -101,15 +100,15 @@ const GUI_DIST_PATH = path.join(__dirname, '..', '..', 'GS-Orchestrator-GUI', 'd
 // Serve compiled Angular static assets
 app.use(express.static(GUI_DIST_PATH));
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/register', registrationRoutes);
-app.use('/api/registry', registryRoutes);
+// Domain & Admin routes
+app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
+app.use('/orch/project', projectRoutes);
+app.use('/orch/reporting', reportingRoutes);
 
 // Fallback all non-API routes to index.html for Angular SPA routing
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
+  if (req.path.startsWith('/orch') || req.path.startsWith('/auth') || req.path.startsWith('/admin')) return next();
   res.sendFile(path.join(GUI_DIST_PATH, 'index.html'));
 });
 ```
@@ -124,7 +123,7 @@ app.get('*', (req, res, next) => {
    - **`superadmin`**: Full administrative privileges (manage users, create/edit users, issue process signals, unregister projects).
    - **`user`**: Read-only access to registry state, project health, and server scanner outputs.
 2. **Authentication Flow**:
-   - Session-based authentication via REST API (`POST /api/auth/login`).
+   - Session-based authentication via REST API (`POST /auth/login`).
    - Default user support (`thor`) with optional password bypass for local development convenience.
 
 ---
@@ -135,17 +134,17 @@ app.get('*', (req, res, next) => {
 sequenceDiagram
     autonumber
     actor Admin as Admin / GUI User
-    participant Orch as GS-Orchestrator (:9000)
-    participant PS as ProcessServer (:9500)
+    participant Orch as GS-Orchestrator (:10000)
+    participant PS as ProcessServer (:9999)
     participant PC as Target ProcessClient
     participant PA as Target ProcessAdapter.js
 
     Admin->>Orch: Click "Stop Project" in GUI
-    Orch->>PS: POST /api/signals { projectName, signal: "stop" }
+    Orch->>PS: POST /ps/process/signals { projectName, signal: "stop" }
     PS->>PS: Queue signal for project
     
     loop Every 15s (Signal Polling)
-        PC->>PS: GET /api/signals/:projectName
+        PC->>PS: GET /ps/process/signals?projectName=...
         PS-->>PC: Return "stop" signal
         PC->>PA: ProcessAdapter.js.stop()
         PA->>PA: Terminate local child processes

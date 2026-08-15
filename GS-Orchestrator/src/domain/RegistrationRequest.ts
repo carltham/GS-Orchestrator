@@ -1,7 +1,10 @@
+import { HostInfo } from './ProjectEntry';
+
 export class RegistrationRequest {
   projectName?: string;
   project?: string;
   path!: string;
+  host?: HostInfo;
   serviceTypes?: Record<string, string>;
   basePorts?: Record<string, number>;
   backendType?: string;

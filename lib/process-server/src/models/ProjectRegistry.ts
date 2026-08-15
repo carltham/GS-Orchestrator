@@ -5,6 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as net from 'net';
 
 export interface SubSystemInfo {
   port: number;
@@ -13,10 +14,18 @@ export interface SubSystemInfo {
   error?: string;
 }
 
+export interface HostInfo {
+  hostname: string;
+  domain?: string;
+  platform: string;
+  ipAddresses: string[];
+}
+
 export interface ProjectEntry {
   name: string;
   path: string;
   registeredAt: string;
+  host?: HostInfo;
   components: Record<string, SubSystemInfo>;
   status: 'start' | 'starting' | 'running' | 'partially' | 'stop' | 'stopping' | 'stopped';
   pid?: number | null;
@@ -113,27 +122,38 @@ export class ProjectRegistry {
     name: string,
     projectPath: string,
     serviceTypes: Record<string, string>,
-    ticket?: string
+    ticket?: string,
+    host?: HostInfo,
+    occupiedPorts?: number[]
   ): ProjectEntry {
     const data = this.load();
     const existing = data.projects[name];
 
     const componentsPorts: Record<string, SubSystemInfo> = existing?.components || {};
+    const excludedPorts = new Set<number>(occupiedPorts || []);
 
     // Allocate ports for new components using the service mapping
     for (const [componentKey, serviceType] of Object.entries(serviceTypes)) {
       const serviceName = componentKey.split('::')[0] || componentKey;
       
-      let alreadyAllocated = false;
-      for (const [existingCompKey, info] of Object.entries(componentsPorts)) {
+      let matchedCompKey: string | null = null;
+      for (const existingCompKey of Object.keys(componentsPorts)) {
         if (existingCompKey.startsWith(`${serviceName}::`) || existingCompKey === serviceName) {
-          alreadyAllocated = true;
+          matchedCompKey = existingCompKey;
           break;
         }
       }
 
-      if (!alreadyAllocated) {
-        const allocatedPort = this.allocatePort(name, serviceName, serviceType, data);
+      // If already allocated, check if the previously assigned port is currently conflicting with a client-reported active port (e.g. host service/docker)
+      if (matchedCompKey) {
+        const currentPort = componentsPorts[matchedCompKey].port;
+        if (excludedPorts.has(currentPort) || this.isPortActive(currentPort)) {
+          // Re-allocate avoiding excluded ports
+          const allocatedPort = this.allocatePort(name, serviceName, serviceType, data, excludedPorts);
+          componentsPorts[matchedCompKey].port = allocatedPort;
+        }
+      } else {
+        const allocatedPort = this.allocatePort(name, serviceName, serviceType, data, excludedPorts);
         const compKeyWithService = `${serviceName}::${serviceType}`;
         componentsPorts[compKeyWithService] = {
           port: allocatedPort,
@@ -147,6 +167,7 @@ export class ProjectRegistry {
       name,
       path: projectPath,
       registeredAt: new Date().toISOString(),
+      host: host || existing?.host,
       components: componentsPorts,
       status: 'running',
       ticket,
@@ -165,13 +186,14 @@ export class ProjectRegistry {
     projectName: string,
     serviceName: string,
     serviceType: string,
-    data: RegistryData
+    data: RegistryData,
+    excludedPorts: Set<number> = new Set()
   ): number {
     const typeKey = (serviceType || serviceName).toLowerCase();
     const basePort = SERVICE_TYPE_BASE_PORTS[typeKey] || 3000;
 
     // Collect all ports allocated to other projects
-    const usedPorts = new Set<number>();
+    const usedPorts = new Set<number>(excludedPorts);
     for (const [otherName, proj] of Object.entries(data.projects)) {
       if (otherName === projectName) continue;
       if (proj.components) {
@@ -182,12 +204,23 @@ export class ProjectRegistry {
     }
 
     let candidatePort = basePort;
-    // Walk upward to avoid collision
-    while (usedPorts.has(candidatePort)) {
+    // Walk upward to avoid collision with other registered projects or actively bound local sockets
+    while (usedPorts.has(candidatePort) || this.isPortActive(candidatePort)) {
       candidatePort++;
     }
 
     return candidatePort;
+  }
+
+  private isPortActive(port: number): boolean {
+    const cp = require('child_process');
+    try {
+      // Fast probe via ss or fuser if on linux, else socket probe
+      const output = cp.execSync(`ss -tlnH sport = :${port} 2>/dev/null || true`, { encoding: 'utf8' }).trim();
+      return output.length > 0;
+    } catch {
+      return false;
+    }
   }
 
   public getProject(name: string): ProjectEntry | undefined {

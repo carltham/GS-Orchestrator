@@ -65,12 +65,9 @@ EOF
   echo "[ProcessInstaller] Installing @gs/process-client via remote HTTP tarball package..."
   (cd "$TARGET_DIR" && npm install --no-audit --no-fund "$PROCESS_SERVER_URL/packages/process-client.tgz")
 
-  echo "[ProcessInstaller] Saving CLIENT_INSTALLATION.md to $TARGET_DIR..."
+  echo "[ProcessInstaller] Downloading CLIENT_INSTALLATION.md to $TARGET_DIR..."
   curl -sSL "$PROCESS_SERVER_URL/install/instructions" > "$TARGET_DIR/CLIENT_INSTALLATION.md" || true
-  echo "--------------------------------------------------"
-  echo "📄 CLIENT INSTALLATION INSTRUCTIONS:"
-  cat "$TARGET_DIR/CLIENT_INSTALLATION.md" 2>/dev/null || true
-  echo "--------------------------------------------------"
+  echo "[ProcessInstaller] Installation complete. Run 'npm start' to start the client and local services."
 }
 
 install_project "$WORKSPACE_DIR"

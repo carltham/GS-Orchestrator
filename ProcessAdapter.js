@@ -1,6 +1,6 @@
 /**
  * ProcessAdapter.js
- * Generated dynamically by ProcessServer on 2026-08-13T14:14:24.027Z
+ * Generated dynamically by ProcessServer on 2026-08-15T09:44:40.104Z
  * Target Project: gs-orchestrator
  */
 
@@ -131,15 +131,19 @@ class ProcessAdapter {
    * Get overall process status and PIDs
    */
   async getStatus() {
-    const pids = {};
+    const components = {};
     for (const [name, proc] of Object.entries(this.processes)) {
-      pids[name] = proc ? proc.pid : null;
+      components[name] = {
+        port: name === 'server' ? 10000 : (process.env.PORT ? parseInt(process.env.PORT, 10) : 10000), // dynamically fetched if needed, fallback to 10000
+        status: proc ? 'running' : 'stopped',
+        pid: proc ? proc.pid : null
+      };
     }
 
     return {
       projectName: this.projectName,
       status: this.status,
-      components: pids
+      components
     };
   }
 }

@@ -5,6 +5,7 @@ import { TelemetryView } from '../views/TelemetryView';
 import { BeatHolder } from '../utils/BeatHolder';
 import { SignalProcessor } from '../services/SignalProcessor';
 import { TelemetryProcessor } from '../services/TelemetryProcessor';
+import { isLocalPortOccupied } from '../utils/PortDetector';
 
 export class LauncherController {
   private state: ClientState;
@@ -33,10 +34,33 @@ export class LauncherController {
     if (this.state.adapter) {
       this.logger.log(`Launching target processes via local ProcessAdapter...`);
       try {
-        const registration = await this.telemetryProcessor.registerWithProcessServer(
+        let registration = await this.telemetryProcessor.registerWithProcessServer(
           this.state.adapter.getServiceTypes?.()
         );
-        await this.state.adapter.start(registration?.ports);
+
+        let finalPorts = registration?.ports;
+
+        // Perform local client-side pre-flight check on target machine (detects local Docker postgres/services)
+        if (finalPorts) {
+          const conflictingPorts: number[] = [];
+          for (const [service, port] of Object.entries(finalPorts)) {
+            const occupied = await isLocalPortOccupied(port);
+            if (occupied) {
+              this.logger.log(`⚠️ Local port collision detected on ${service}:${port} (e.g. host daemon / docker). Reporting to ProcessServer for reassignment...`, 'WARN');
+              conflictingPorts.push(port);
+            }
+          }
+
+          if (conflictingPorts.length > 0) {
+            registration = await this.telemetryProcessor.registerWithProcessServer(
+              this.state.adapter.getServiceTypes?.(),
+              conflictingPorts
+            );
+            finalPorts = registration?.ports;
+          }
+        }
+
+        await this.state.adapter.start(finalPorts);
         this.logger.log(`Target process launch initiated successfully.`);
       } catch (err: any) {
         this.logger.log(`Failed to start processes via adapter: ${err.message}`, 'ERROR');

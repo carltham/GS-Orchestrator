@@ -1,4 +1,5 @@
 import { ClientState } from '../models/ClientState';
+import { detectHostInfo, HostInfo } from '../utils/HostDetector';
 
 export interface SubSystemInfo {
   port: number;
@@ -12,13 +13,16 @@ export interface HeartbeatPayload {
   status: string;
   pid: number | null;
   timestamp: string;
+  host?: HostInfo;
   components?: Record<string, SubSystemInfo>;
 }
 
 export interface RegisterPayload {
   projectName: string;
   path: string;
+  host?: HostInfo;
   serviceTypes: Record<string, string>;
+  occupiedPorts?: number[];
 }
 
 export class TelemetryView {
@@ -34,15 +38,18 @@ export class TelemetryView {
       status: statusStr,
       pid: pidNum,
       timestamp: new Date().toISOString(),
+      host: detectHostInfo(),
       components
     };
   }
 
-  public formatRegistration(serviceTypes?: Record<string, string>): RegisterPayload {
+  public formatRegistration(serviceTypes?: Record<string, string>, occupiedPorts?: number[]): RegisterPayload {
     return {
       projectName: this.state.projectName,
       path: process.cwd(),
-      serviceTypes: serviceTypes || this.state.adapter?.getServiceTypes?.() || { backend: 'node-ts', frontend: 'angular' }
+      host: detectHostInfo(),
+      serviceTypes: serviceTypes || this.state.adapter?.getServiceTypes?.() || { backend: 'node-ts', frontend: 'angular' },
+      occupiedPorts
     };
   }
 }

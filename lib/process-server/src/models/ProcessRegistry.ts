@@ -10,11 +10,19 @@ export interface SubSystemInfo {
   error?: string;
 }
 
+export interface HostInfo {
+  hostname: string;
+  domain?: string;
+  platform: string;
+  ipAddresses: string[];
+}
+
 export interface ProcessHeartbeat {
   projectName: string;
   status: string;
   pid?: number | null;
   timestamp: string;
+  host?: HostInfo;
   components?: Record<string, SubSystemInfo>;
 }
 

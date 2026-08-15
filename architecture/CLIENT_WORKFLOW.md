@@ -57,13 +57,13 @@ sequenceDiagram
     %% Phase 3: Registration Confirmation & Heartbeat
     rect rgb(255, 250, 240)
         note over Client, Server: Phase 3: Registration Confirmation & Health Monitoring
-        Client->>Server: POST /api/register (Confirm live registration)
+        Client->>Server: POST /orch/project/register (Confirm live registration)
         Server->>Reg: Set project status = "running"
         Server-->>Client: Registration confirmed
         
         loop Every 15 Seconds
-            Client->>Server: POST /api/health {status: ok/degraded, uptime}
-            Client->>Server: GET /api/signals/:projectName
+            Client->>Server: POST /orch/reporting/project/health {status: ok/degraded, uptime}
+            Client->>Server: GET /ps/process/signals?projectName=...
         end
     end
 
@@ -73,8 +73,7 @@ sequenceDiagram
         Server->>Client: Stop signal queued (or Orchestrator curl shutdown request)
         Client->>Adapter: ProcessAdapter.js.stop()
         Adapter->>LocalApp: Terminate Backend & Database child processes
-        Client->>Server: POST /api/signals/:projectName/ack
-        Client->>Server: POST /api/register/:projectName/stopped
+        Client->>Server: POST /orch/reporting/project/:projectName/is-stopped
         Server->>Reg: Update project status = "stopped"
         note over Client: Client remains running to monitor signals & report state
     end

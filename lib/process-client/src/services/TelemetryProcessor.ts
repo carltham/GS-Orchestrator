@@ -61,9 +61,12 @@ export class TelemetryProcessor {
   /**
    * Issue startup registration to Process Server on port 9999.
    */
-  public async registerWithProcessServer(serviceTypes?: Record<string, string>): Promise<ProcessRegistration | null> {
+  public async registerWithProcessServer(
+    serviceTypes?: Record<string, string>,
+    occupiedPorts?: number[]
+  ): Promise<ProcessRegistration | null> {
     try {
-      const payload = this.telemetry.formatRegistration(serviceTypes);
+      const payload = this.telemetry.formatRegistration(serviceTypes, occupiedPorts);
       this.logger.log(`Registering local project with ProcessServer registry at: ${this.state.processServerUrl}...`);
 
       const res = await fetch(`${this.state.processServerUrl}/ps/project/register`, {

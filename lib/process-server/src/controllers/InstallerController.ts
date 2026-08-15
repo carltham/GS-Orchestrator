@@ -30,12 +30,20 @@ export class InstallerController {
 
   // GET /install/instructions
   public getInstructions(req: Request, res: Response): void {
-    const docPath = path.resolve(__dirname, '..', 'templates', 'CLIENT_INSTALLATION.md');
-    if (fs.existsSync(docPath)) {
+    // Look in docs/ first (canonical source), with fallback to template/dist paths
+    const candidates = [
+      path.resolve(process.cwd(), 'docs', 'CLIENT_INSTALLATION.md'),
+      path.resolve(__dirname, '..', '..', '..', '..', 'docs', 'CLIENT_INSTALLATION.md'),
+      path.resolve(__dirname, '..', 'templates', 'CLIENT_INSTALLATION.md')
+    ];
+
+    const docPath = candidates.find(p => fs.existsSync(p));
+
+    if (docPath) {
       res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
       res.sendFile(docPath);
     } else {
-      res.status(404).send('# Error: CLIENT_INSTALLATION.md template not found');
+      res.status(404).send('# Error: CLIENT_INSTALLATION.md not found');
     }
   }
 

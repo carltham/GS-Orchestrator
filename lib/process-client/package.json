@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Runtime process client engine for GS-Orchestrator target projects",
   "main": "dist/index.js",
+  "bin": {
+    "gs-client": "dist/cli.js"
+  },
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "npx tsc",

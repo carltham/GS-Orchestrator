@@ -2,7 +2,7 @@
   "name": "gs-orchestrator",
   "version": "1.0.0",
   "description": "",
-  "main": "startupHandler.js",
+  "main": "GS-Orchestrator/dist/server.js",
   "directories": {
     "lib": "lib"
   },
@@ -17,8 +17,7 @@
     "test:sft": "npm --prefix testing run test:sft",
     "test:sit": "npm --prefix testing run test:sit",
     "test:uit": "npm --prefix testing/playwright run test:uit",
-    "test:all": "testing/node_modules/.bin/ts-node --project testing/tsconfig.json testing/src/run-all-tests.ts",
-    "startupHandler": "node startupHandler.js"
+    "test:all": "testing/node_modules/.bin/ts-node --project testing/tsconfig.json testing/src/run-all-tests.ts"
   },
   "repository": {
     "type": "git",
