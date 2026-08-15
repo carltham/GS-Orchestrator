@@ -6,9 +6,19 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
   const PROJECT_NAME = 'GUI-Simulated-Combo-App';
 
   test.beforeEach(async ({ page }) => {
-    // Ensure 'GUI-Simulated-Combo-App' is registered as a target simulated project in the database
+    // Ensure 'GUI-Simulated-Combo-App' and 'GS-Orchestrator' are registered in the database
     // Paths are kept separated from the GS-Orchestrator project root
     try {
+      await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectName: 'GS-Orchestrator',
+          path: '/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator',
+          serviceTypes: { backend: 'node-ts', frontend: 'angular' }
+        })
+      });
+
       await fetch(`${ORCHESTRATOR_URL}/orch/project/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -77,5 +87,67 @@ test.describe('GS-Orchestrator Projects Lifecycle - GUI Integration Suite', () =
     // Verify UI updates status to reflect "stopping" (transition state) or "stopped"
     const stoppingBadgeText = await statusBadge.textContent();
     expect(['stopping', 'stopped', 'running']).toContain(stoppingBadgeText?.trim());
+  });
+
+  test('should disallow stopping the GS-Orchestrator core service from GUI', async ({ page }) => {
+    // 1. Authenticate as Thor on localhost
+    const projectsTab = page.locator('[data-testid="nav-tab-projects"]');
+    await projectsTab.click();
+    await page.waitForTimeout(500);
+
+    const loginBtn = page.locator('button:has-text("Thor Superadmin Login")');
+    if (await loginBtn.isVisible()) {
+      await loginBtn.click();
+    } else {
+      const loginPrompt = page.locator('button:has-text("Click here to login"), .login-prompt button');
+      if (await loginPrompt.isVisible()) {
+        await loginPrompt.click();
+        await page.waitForSelector('button:has-text("Thor Superadmin Login")');
+        await page.locator('button:has-text("Thor Superadmin Login")').click();
+      }
+    }
+    await page.waitForTimeout(1000);
+
+    await projectsTab.click();
+    await page.waitForSelector('[data-testid="registered-projects-table"]');
+
+    // 2. Identify GS-Orchestrator row in the registered projects table
+    const orchRow = page.locator('tr').filter({ has: page.locator('.project-name', { hasText: 'GS-Orchestrator' }) });
+    await expect(orchRow).toBeVisible();
+
+    const orchStatusBadge = orchRow.locator('.badge-clickable');
+    await orchStatusBadge.click();
+
+    // 3. Verify State Management Modal displays for GS-Orchestrator
+    const modalHeader = page.locator('.modal-content h3');
+    await expect(modalHeader).toContainText('Manage Project State');
+
+    // 4. Attempt to trigger Stop on GS-Orchestrator
+    await page.locator('.btn-danger:has-text("Stop Project")').click();
+    await page.waitForTimeout(500);
+
+    // Confirm the action in the confirmation dialog
+    const confirmBtn = page.locator('button:has-text("Confirm"), .dialog-btn-confirm, button.btn-danger:has-text("Confirm")');
+    if (await confirmBtn.isVisible()) {
+      await confirmBtn.click();
+      await page.waitForTimeout(500);
+    }
+
+    // 5. Verify error dialog / message preventing Orchestrator from being stopped
+    const dialogModal = page.locator('.dialog-modal, .modal-content, [role="dialog"], .dialog-overlay');
+    await expect(dialogModal.first()).toBeVisible();
+
+    const dialogText = await page.locator('body').innerText();
+    expect(dialogText).toMatch(/Cannot stop or unregister the main Orchestrator service|Failed to stop project/);
+
+    // Close any open alert dialog
+    const okBtn = page.locator('button:has-text("OK"), button:has-text("Close")');
+    if (await okBtn.isVisible()) {
+      await okBtn.click();
+    }
+
+    // 6. Verify GS-Orchestrator remains in "running" status
+    const badgeTextAfter = await orchStatusBadge.textContent();
+    expect(badgeTextAfter?.trim()).toBe('running');
   });
 });

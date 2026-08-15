@@ -1,8 +1,10 @@
 import { Request, Response, Router } from 'express';
 import { RegistryService } from '../services/RegistryService';
+import { SystemConfigService } from '../services/SystemConfigService';
 
 export function createHealthRoutes(registry: RegistryService, port: number): Router {
   const router = Router();
+  const sysConfig = SystemConfigService.getInstance();
 
   // GET /reports/health
   router.get('/reports/health', (req: Request, res: Response) => {
@@ -25,7 +27,7 @@ export function createHealthRoutes(registry: RegistryService, port: number): Rou
 
       if (!projectName) {
         return res.status(400).json({
-          error: 'Missing required field: projectName',
+          error: sysConfig.formatError('missingHealthProjectName'),
         });
       }
 
@@ -33,7 +35,7 @@ export function createHealthRoutes(registry: RegistryService, port: number): Rou
       if (!projectEntry) {
         console.warn(`⚠️ Health report from unregistered project "${projectName}"`);
         return res.status(404).json({
-          error: `Project "${projectName}" not found`,
+          error: sysConfig.formatError('healthProjectNotFound', { projectName }),
         });
       }
 
@@ -50,7 +52,7 @@ export function createHealthRoutes(registry: RegistryService, port: number): Rou
     } catch (error) {
       console.error('Health report error:', error);
       res.status(500).json({
-        error: 'Failed to process health report',
+        error: sysConfig.formatError('healthReportFailed'),
         details: error instanceof Error ? error.message : String(error),
       });
     }

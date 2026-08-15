@@ -3,6 +3,7 @@ import { Request, Response, Router } from 'express';
 import { PortAllocatorService } from '../services/PortAllocatorService';
 import { RegistryService } from '../services/RegistryService';
 import { ServerScannerService } from '../services/ServerScannerService';
+import { SystemConfigService } from '../services/SystemConfigService';
 import { SubSystemInfo } from '../domain/ProjectEntry';
 
 export function createRegistrationRoutes(
@@ -12,6 +13,7 @@ export function createRegistrationRoutes(
   selfProjectName: string
 ): Router {
   const router = Router();
+  const sysConfig = SystemConfigService.getInstance();
 
   // DELETE /orch/project/:projectName
   router.delete('/orch/project/:projectName', async (req: Request, res: Response) => {
@@ -20,13 +22,13 @@ export function createRegistrationRoutes(
 
       if (!projectName) {
         return res.status(400).json({
-          error: 'Missing required parameter: projectName',
+          error: sysConfig.formatError('missingProjectName'),
         });
       }
 
-      if (projectName === selfProjectName) {
+      if ((projectName === selfProjectName || sysConfig.isProtectedService(projectName)) && sysConfig.getRules().preventStop) {
         return res.status(400).json({
-          error: `Cannot stop or unregister the main Orchestrator service "${projectName}" itself, as it is the central administration hub.`,
+          error: sysConfig.formatError('cannotStopSelf', { projectName }),
         });
       }
 
@@ -56,13 +58,72 @@ export function createRegistrationRoutes(
         });
       } else {
         return res.status(404).json({
-          error: `Project "${projectName}" not found in registry`,
+          error: sysConfig.formatError('projectNotFound', { projectName }),
         });
       }
     } catch (error) {
       console.error('Unregistration error:', error);
       res.status(500).json({
-        error: 'Failed to unregister project',
+        error: sysConfig.formatError('unregisterFailed'),
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  // POST /orch/project/:projectName/restart
+  router.post('/orch/project/:projectName/restart', async (req: Request, res: Response) => {
+    try {
+      const projectName = req.params.projectName;
+
+      if (!projectName) {
+        return res.status(400).json({
+          error: sysConfig.formatError('missingProjectName'),
+        });
+      }
+
+      const project = registry.getProject(projectName);
+      if (!project) {
+        return res.status(404).json({
+          error: sysConfig.formatError('projectNotFound', { projectName }),
+        });
+      }
+
+      project.status = 'starting';
+      registry.updateProject(projectName, project);
+
+      // Extract ports for the START signal
+      const ports: Record<string, number> = {};
+      if (project.components) {
+        for (const [key, info] of Object.entries(project.components)) {
+          const serviceName = key.split('::')[0] || key;
+          ports[serviceName] = info.port;
+        }
+      }
+
+      // Queue START signal on ProcessServer
+      await fetch('http://localhost:9999/ps/process/signals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetProject: projectName,
+          action: 'START',
+          ports
+        })
+      }).catch(err => {
+        console.warn(`⚠️ Could not post START signal to Process Server: ${err.message}`);
+      });
+
+      console.log(`🚀 Project "${projectName}" restart initiated. START signal queued for client.`);
+      return res.json({
+        message: `Project "${projectName}" restart initiated. START signal queued for client.`,
+        projectName,
+        status: 'starting',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Restart error:', error);
+      res.status(500).json({
+        error: sysConfig.formatError('restartFailed'),
         details: error instanceof Error ? error.message : String(error),
       });
     }
@@ -76,13 +137,13 @@ export function createRegistrationRoutes(
 
       if (!projectName) {
         return res.status(400).json({
-          error: 'Missing required parameter: projectName',
+          error: sysConfig.formatError('missingProjectName'),
         });
       }
 
-      if (projectName === selfProjectName) {
+      if ((projectName === selfProjectName || sysConfig.isProtectedService(projectName)) && sysConfig.getRules().preventMarkStopped) {
         return res.status(400).json({
-          error: `The main Orchestrator service "${projectName}" is permanently active and cannot be set to stopped.`,
+          error: sysConfig.formatError('cannotMarkStoppedSelf', { projectName }),
         });
       }
 
@@ -99,13 +160,13 @@ export function createRegistrationRoutes(
         });
       } else {
         return res.status(404).json({
-          error: `Project "${projectName}" not found in registry`,
+          error: sysConfig.formatError('projectNotFound', { projectName }),
         });
       }
     } catch (error) {
       console.error('Stop confirmation error:', error);
       res.status(500).json({
-        error: 'Failed to confirm project stopped',
+        error: sysConfig.formatError('stopConfirmationFailed'),
         details: error instanceof Error ? error.message : String(error),
       });
     }
@@ -121,7 +182,7 @@ export function createRegistrationRoutes(
 
       if (!projectName || !projectPath) {
         return res.status(400).json({
-          error: 'Missing required fields: projectName, path',
+          error: sysConfig.formatError('missingRequiredFields'),
         });
       }
 
@@ -225,7 +286,7 @@ export function createRegistrationRoutes(
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({
-        error: 'Failed to register project',
+        error: sysConfig.formatError('registrationFailed'),
         details: error instanceof Error ? error.message : String(error),
       });
     }

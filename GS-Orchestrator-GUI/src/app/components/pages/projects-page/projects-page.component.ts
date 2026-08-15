@@ -77,11 +77,30 @@ export class ProjectsPageComponent implements OnInit {
 
   async onRestartProject(): Promise<void> {
     if (!this.selectedProject) return;
-    await this.dialogService.alert(
-      `Restart functionality coming soon for project "${this.selectedProject.name}"`,
-      'Feature Coming Soon'
+
+    const projectName = this.selectedProject.name;
+    const confirmed = await this.dialogService.confirm(
+      `Are you sure you want to restart project "${projectName}"?`,
+      'Restart Project'
     );
-    this.closeStateModal();
+    if (!confirmed) return;
+
+    this.orchestratorService.restartProject(projectName).subscribe({
+      next: async (res: any) => {
+        await this.dialogService.alert(
+          `Project "${projectName}" restart initiated. Start signal sent to client.`,
+          'Project Restarting'
+        );
+        this.closeStateModal();
+        setTimeout(() => this.refresh(), 500);
+      },
+      error: async (err: any) => {
+        await this.dialogService.alert(
+          `Failed to restart project: ${err.error?.error || 'Unknown error'}`,
+          'Error'
+        );
+      }
+    });
   }
 
   refresh(): void {

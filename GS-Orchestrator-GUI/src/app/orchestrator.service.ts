@@ -102,4 +102,10 @@ export class OrchestratorService {
       headers: this.authService.getAuthHeaders()
     });
   }
+
+  restartProject(projectName: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/orch/project/${projectName}/restart`, {}, {
+      headers: this.authService.getAuthHeaders()
+    });
+  }
 }
