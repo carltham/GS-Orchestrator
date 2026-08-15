@@ -16,6 +16,7 @@ export interface QueuedSignal {
   action: 'START' | 'STOP' | 'RESTART' | 'DELETE';
   ports?: Record<string, number>;
   timestamp?: string;
+  leaseOwner?: string;
 }
 
 export class MockProcessServer {
@@ -79,18 +80,53 @@ export class MockProcessServer {
     this.app.get('/ps/process/signals', (req: Request, res: Response) => {
       const projectName = (req.query.projectName as string) || '';
       const queue = this.signalQueues.get(projectName) || [];
-      // Drain the queued signals for the client
-      this.signalQueues.set(projectName, []);
+      const clientInstanceId = req.query.clientInstanceId as string | undefined;
+      const claim = req.query.claim === 'true';
+      const signals = claim
+        ? queue.filter(signal => !signal.leaseOwner).map(signal => {
+          signal.leaseOwner = clientInstanceId;
+          return signal;
+        })
+        : queue;
       res.status(200).json({
         success: true,
-        signals: queue,
+        signals,
       });
+    });
+
+    this.app.post('/ps/process/signals/:id/ack', (req: Request, res: Response) => {
+      const clientInstanceId = req.body.clientInstanceId;
+      for (const [projectName, queue] of this.signalQueues.entries()) {
+        const signalIndex = queue.findIndex(
+          signal => signal.id === req.params.id && signal.leaseOwner === clientInstanceId
+        );
+        if (signalIndex >= 0) {
+          queue.splice(signalIndex, 1);
+          this.signalQueues.set(projectName, queue);
+          return res.status(200).json({ status: 'acknowledged' });
+        }
+      }
+      res.status(409).json({ error: 'lease owner mismatch' });
+    });
+
+    this.app.post('/ps/process/signals/:id/nack', (req: Request, res: Response) => {
+      const clientInstanceId = req.body.clientInstanceId;
+      for (const queue of this.signalQueues.values()) {
+        const signal = queue.find(
+          queued => queued.id === req.params.id && queued.leaseOwner === clientInstanceId
+        );
+        if (signal) {
+          delete signal.leaseOwner;
+          return res.status(200).json({ status: 'released' });
+        }
+      }
+      res.status(409).json({ error: 'lease owner mismatch' });
     });
 
     // Enqueue signal endpoint (or programmatic)
     this.app.post('/ps/process/signals', (req: Request, res: Response) => {
-      const { target, action, ports } = req.body;
-      this.queueSignal(target, {
+      const { targetProject, target, action, ports } = req.body;
+      this.queueSignal(targetProject || target, {
         id: `sig-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         action,
         ports,

@@ -19,9 +19,10 @@ This document lists all active HTTP API endpoints across **ProcessServer** (`:99
 | `GET` | `/ps/project/:name` | Retrieve details for a specific registered project |
 | `DELETE` | `/ps/project/:name` | Unregister a project and release allocated ports |
 | `PATCH` | `/ps/project/:name/status` | Update the runtime status of a registered project |
-| `GET` | `/ps/process/signals` | Retrieve queued lifecycle signals for a project (`?projectName=...`) |
+| `GET` | `/ps/process/signals` | Inspect signals without consuming; clients claim with `claim=true&projectName=...&clientInstanceId=...` |
 | `POST` | `/ps/process/signals` | Enqueue a lifecycle signal (`START`, `STOP`, `DELETE`) |
-| `POST` | `/ps/process/signals/ack` | Acknowledge processed lifecycle signals |
+| `POST` | `/ps/process/signals/:id/ack` | Acknowledge a successfully executed leased signal |
+| `POST` | `/ps/process/signals/:id/nack` | Release a failed leased signal for retry |
 | `POST` | `/ps/process/heartbeat` | Receive runtime telemetry heartbeat from ProcessClient |
 | `GET` | `/ps/process/heartbeats` | Retrieve all tracked active process heartbeats |
 | `GET` | `/ps/host/unregistered` | Scan OS network sockets (`ss`/`lsof`) for unmanaged TCP listeners |
@@ -40,7 +41,7 @@ This document lists all active HTTP API endpoints across **ProcessServer** (`:99
 | `POST` | `/orch/project/register` | Register a project and allocate dynamic ports | No |
 | `GET` | `/orch/project/registry` | Retrieve list of all registered projects | No |
 | `GET` | `/orch/project/count` | Retrieve total count of registered projects | No |
-| `DELETE` | `/orch/project/:name` | Unregister project and initiate stop sequence | No |
+| `DELETE` | `/orch/project/:name` | Queue DELETE; unregister after client acknowledgment | No |
 | `POST` | `/orch/project/:name/start` | Queue START signal for a project | No |
 | `POST` | `/orch/project/:name/stop` | Queue STOP signal for a project | No |
 | `POST` | `/orch/project/:name/restart` | Queue RESTART signal for a project | No |

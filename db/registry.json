@@ -3,7 +3,8 @@
     "SIT-Combo-App-DBOnly": {
       "name": "SIT-Combo-App-DBOnly",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-DBOnly",
-      "registeredAt": "2026-08-15T21:12:10.937Z",
+      "registeredAt": "2026-08-15T22:47:04.427Z",
+      "clientInstanceId": "5f2835c1-eaea-419a-ae8e-c3397c9aebff",
       "host": {
         "hostname": "Hydra",
         "platform": "linux",
@@ -21,12 +22,13 @@
       },
       "status": "stopped",
       "unstoppable": false,
-      "pid": 542315
+      "pid": 635633
     },
     "SIT-Combo-App-BackendOnly": {
       "name": "SIT-Combo-App-BackendOnly",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-BackendOnly",
-      "registeredAt": "2026-08-15T21:12:11.472Z",
+      "registeredAt": "2026-08-15T22:47:05.303Z",
+      "clientInstanceId": "68989c39-0a3d-4862-98b6-108126f3d6a9",
       "host": {
         "hostname": "Hydra",
         "platform": "linux",
@@ -44,12 +46,13 @@
       },
       "status": "stopped",
       "unstoppable": false,
-      "pid": 542348
+      "pid": 635681
     },
     "SIT-Combo-App-FrontendOnly": {
       "name": "SIT-Combo-App-FrontendOnly",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-FrontendOnly",
-      "registeredAt": "2026-08-15T21:12:12.004Z",
+      "registeredAt": "2026-08-15T22:47:06.241Z",
+      "clientInstanceId": "634c8f16-2f3a-4f64-bd3f-45305d1b5ca3",
       "host": {
         "hostname": "Hydra",
         "platform": "linux",
@@ -67,12 +70,13 @@
       },
       "status": "stopped",
       "unstoppable": false,
-      "pid": 542371
+      "pid": 635773
     },
     "SIT-Combo-App-BackendAndDB": {
       "name": "SIT-Combo-App-BackendAndDB",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-BackendAndDB",
-      "registeredAt": "2026-08-15T21:12:12.673Z",
+      "registeredAt": "2026-08-15T22:47:07.155Z",
+      "clientInstanceId": "84749640-47c8-45c1-b318-81d817f97a88",
       "host": {
         "hostname": "Hydra",
         "platform": "linux",
@@ -95,12 +99,13 @@
       },
       "status": "stopped",
       "unstoppable": false,
-      "pid": 542404
+      "pid": 635804
     },
     "SIT-Combo-App-FrontendAndBackend": {
       "name": "SIT-Combo-App-FrontendAndBackend",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-FrontendAndBackend",
-      "registeredAt": "2026-08-15T21:12:13.350Z",
+      "registeredAt": "2026-08-15T22:47:08.131Z",
+      "clientInstanceId": "19c479f8-55b7-4c5d-9d53-d32f7efcabbf",
       "host": {
         "hostname": "Hydra",
         "platform": "linux",
@@ -123,12 +128,13 @@
       },
       "status": "stopped",
       "unstoppable": false,
-      "pid": 542461
+      "pid": 635856
     },
     "SIT-Combo-App-FrontendAndDB": {
       "name": "SIT-Combo-App-FrontendAndDB",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-FrontendAndDB",
-      "registeredAt": "2026-08-15T21:12:14.040Z",
+      "registeredAt": "2026-08-15T22:47:09.073Z",
+      "clientInstanceId": "12647558-3ebc-4ffe-a648-5d4ccfdd8d5e",
       "host": {
         "hostname": "Hydra",
         "platform": "linux",
@@ -151,12 +157,13 @@
       },
       "status": "stopped",
       "unstoppable": false,
-      "pid": 542497
+      "pid": 635906
     },
     "SIT-Combo-App-FullIntegrated": {
       "name": "SIT-Combo-App-FullIntegrated",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/SIT-Combo-App-FullIntegrated",
-      "registeredAt": "2026-08-15T21:12:14.674Z",
+      "registeredAt": "2026-08-15T22:47:10.090Z",
+      "clientInstanceId": "73abaecb-9932-4846-9463-4a9c6527609f",
       "host": {
         "hostname": "Hydra",
         "platform": "linux",
@@ -184,12 +191,12 @@
       },
       "status": "stopped",
       "unstoppable": false,
-      "pid": 542560
+      "pid": 635999
     },
     "SIT-Fresh-Verification-App": {
       "name": "SIT-Fresh-Verification-App",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
-      "registeredAt": "2026-08-15T21:12:16.193Z",
+      "registeredAt": "2026-08-15T22:51:37.934Z",
       "components": {
         "backend::node-ts": {
           "port": 3000,
@@ -208,7 +215,7 @@
     "GS-Orchestrator": {
       "name": "GS-Orchestrator",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
-      "registeredAt": "2026-08-15T21:12:16.283Z",
+      "registeredAt": "2026-08-15T22:51:38.027Z",
       "components": {
         "backend::node-ts": {
           "port": 10000,
@@ -223,64 +230,8 @@
       },
       "status": "running",
       "unstoppable": true
-    },
-    "GUI-Sim-Lifecycle-App": {
-      "name": "GUI-Sim-Lifecycle-App",
-      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/GUI-Sim-Lifecycle-App",
-      "registeredAt": "2026-08-15T21:13:06.429Z",
-      "host": {
-        "hostname": "Hydra",
-        "platform": "linux",
-        "ipAddresses": [
-          "192.168.0.128",
-          "172.20.0.1"
-        ]
-      },
-      "components": {
-        "frontend::frontend": {
-          "port": 9006,
-          "status": "stopped",
-          "pid": null
-        },
-        "backend::backend": {
-          "port": 8084,
-          "status": "stopped",
-          "pid": null
-        }
-      },
-      "status": "stopped",
-      "unstoppable": false,
-      "pid": 545135
-    },
-    "GUI-Sim-Restart-App": {
-      "name": "GUI-Sim-Restart-App",
-      "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator/testing/temp-apps/GUI-Sim-Restart-App",
-      "registeredAt": "2026-08-15T21:13:57.966Z",
-      "host": {
-        "hostname": "Hydra",
-        "platform": "linux",
-        "ipAddresses": [
-          "192.168.0.128",
-          "172.20.0.1"
-        ]
-      },
-      "components": {
-        "backend::backend": {
-          "port": 8088,
-          "status": "stopped",
-          "pid": null
-        },
-        "database::database": {
-          "port": 5441,
-          "status": "stopped",
-          "pid": null
-        }
-      },
-      "status": "stopped",
-      "unstoppable": false,
-      "pid": 546502
     }
   },
   "nextPortBase": 4200,
-  "lastUpdated": "2026-08-15T21:14:37.860Z"
+  "lastUpdated": "2026-08-15T22:51:38.027Z"
 }

@@ -72,7 +72,9 @@ curl -sSL http://localhost:9999/install.js | node
 | Endpoint | Method | Description |
 |---|---|---|
 | `/ps/installer/generate` | `POST` | Generate dynamic `ProcessAdapter.js` |
-| `/ps/process/signals` | `GET/POST` | Control plane signal queue |
+| `/ps/process/signals` | `GET/POST` | Persisted leased signal queue; inspection is non-destructive |
+| `/ps/process/signals/:id/ack` | `POST` | Confirm successful signal execution |
+| `/ps/process/signals/:id/nack` | `POST` | Release failed signal for retry |
 | `/ps/process/heartbeat` | `POST` | ProcessClient runtime telemetry heartbeat |
 | `/ps/host/unregistered` | `GET` | Low-level OS socket & port scanner |
 

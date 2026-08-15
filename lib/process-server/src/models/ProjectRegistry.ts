@@ -26,6 +26,7 @@ export interface ProjectEntry {
   name: string;
   path: string;
   registeredAt: string;
+  clientInstanceId?: string;
   host?: HostInfo;
   components: Record<string, SubSystemInfo>;
   status: 'start' | 'starting' | 'running' | 'partially' | 'stop' | 'stopping' | 'stopped';
@@ -126,7 +127,8 @@ export class ProjectRegistry {
     serviceTypes: Record<string, string>,
     ticket?: string,
     host?: HostInfo,
-    occupiedPorts?: number[]
+    occupiedPorts?: number[],
+    clientInstanceId?: string
   ): ProjectEntry {
     const data = this.load();
     const existing = data.projects[name];
@@ -173,6 +175,7 @@ export class ProjectRegistry {
       name,
       path: projectPath,
       registeredAt: new Date().toISOString(),
+      clientInstanceId: clientInstanceId || existing?.clientInstanceId,
       host: host || existing?.host,
       components: componentsPorts,
       status: 'running',

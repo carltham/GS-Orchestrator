@@ -134,7 +134,7 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
     const unregisterRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/GS-Orchestrator`, {
       method: 'DELETE'
     });
-    expect(unregisterRes.status).toBe(400);
+    expect(unregisterRes.status).toBe(403);
 
     // 4. Verify GS-Orchestrator remains in running status in the registry
     const registryRes = await fetch(`${ORCHESTRATOR_URL}/orch/project/registry`);

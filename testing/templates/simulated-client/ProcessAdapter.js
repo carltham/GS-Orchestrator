@@ -31,7 +31,7 @@ class ProcessAdapter {
       const serviceFolder = serviceFolders[serviceName];
       if (!this.serviceTypes[serviceName] || !fs.existsSync(path.join(process.cwd(), serviceFolder))) continue;
 
-      const processHandle = spawn('node', ['server.js'], {
+      const processHandle = spawn(process.execPath, ['server.js'], {
         cwd: path.join(process.cwd(), serviceFolder),
         env: {
           ...process.env,
@@ -44,6 +44,7 @@ class ProcessAdapter {
       this.processes[serviceName] = processHandle;
       startedServices.push(serviceName);
       processHandle.on('exit', () => {
+        if (this.processes[serviceName] !== processHandle) return;
         delete this.processes[serviceName];
         if (Object.keys(this.processes).length === 0) this.status = 'STOPPED';
       });

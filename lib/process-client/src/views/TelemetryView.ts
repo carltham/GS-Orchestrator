@@ -10,6 +10,7 @@ export interface SubSystemInfo {
 
 export interface HeartbeatPayload {
   projectName: string;
+  clientInstanceId: string;
   status: string;
   pid: number | null;
   timestamp: string;
@@ -19,6 +20,7 @@ export interface HeartbeatPayload {
 
 export interface RegisterPayload {
   projectName: string;
+  clientInstanceId: string;
   path: string;
   host?: HostInfo;
   serviceTypes: Record<string, string>;
@@ -35,6 +37,7 @@ export class TelemetryView {
   public formatHeartbeat(statusStr: string, pidNum: number | null, components: Record<string, SubSystemInfo> = {}): HeartbeatPayload {
     return {
       projectName: this.state.projectName,
+      clientInstanceId: this.state.clientInstanceId,
       status: statusStr,
       pid: pidNum,
       timestamp: new Date().toISOString(),
@@ -46,6 +49,7 @@ export class TelemetryView {
   public formatRegistration(serviceTypes?: Record<string, string>, occupiedPorts?: number[]): RegisterPayload {
     return {
       projectName: this.state.projectName,
+      clientInstanceId: this.state.clientInstanceId,
       path: process.cwd(),
       host: detectHostInfo(),
       serviceTypes: serviceTypes || this.state.adapter?.getServiceTypes?.() || { backend: 'node-ts', frontend: 'angular' },

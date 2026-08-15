@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { projectRegistry } from '../models/ProjectRegistry';
+import { processRegistry } from '../models/ProcessRegistry';
 import { SystemConfigService } from '../services/SystemConfigService';
 
 export class ProjectController {
@@ -12,6 +13,7 @@ export class ProjectController {
       const ticket = req.body.ticket;
       const host = req.body.host;
       const occupiedPorts = req.body.occupiedPorts;
+      const clientInstanceId = req.body.clientInstanceId;
 
       if (!projectName || !projectPath) {
         return res.status(400).json({
@@ -20,7 +22,15 @@ export class ProjectController {
       }
 
       console.log(`[ProcessServer:ProjectController] Incoming registration hook for "${projectName}" at path "${projectPath}" (host: ${host?.hostname || 'local'})`);
-      const entry = projectRegistry.registerProject(projectName, projectPath, serviceTypes, ticket, host, occupiedPorts);
+      const entry = projectRegistry.registerProject(
+        projectName,
+        projectPath,
+        serviceTypes,
+        ticket,
+        host,
+        occupiedPorts,
+        clientInstanceId
+      );
 
       // Map components back to ports format expected by standard Process Clients
       const ports: Record<string, number> = {};
@@ -98,6 +108,8 @@ export class ProjectController {
     if (!success) {
       return res.status(404).json({ error: `Project "${name}" was not found` });
     }
+    processRegistry.removeHeartbeat(name);
+    processRegistry.removeSignalsForProject(name);
     res.json({ status: 'unregistered', project: name });
   }
 }

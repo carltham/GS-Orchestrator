@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { IProcessAdapter } from '../types/IProcessAdapter';
 import { BeatHolder } from '../utils/BeatHolder';
 
@@ -13,6 +14,7 @@ export interface ProcessClientConfig {
 
 export class ClientState {
   public readonly projectName: string;
+  public readonly clientInstanceId: string;
   public readonly processServerUrl: string;
   public pollIntervalMs: number;
   public heartbeatIntervalMs: number;
@@ -27,6 +29,7 @@ export class ClientState {
 
   constructor(config: ProcessClientConfig) {
     this.projectName = config.projectName;
+    this.clientInstanceId = crypto.randomUUID();
     this.processServerUrl = config.processServerUrl || process.env.PROCESS_SERVER_URL || 'http://localhost:9999';
 
     // Attempt to load operator-set constants from static git-level configuration files

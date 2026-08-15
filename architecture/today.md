@@ -94,15 +94,15 @@ sequenceDiagram
     Orch-->>User: Status changed to 'stopping' (200)
 
     loop Every 15s (Metronome Beat)
-        Client->>PS: GET /ps/process/signals?projectName=:name
-        PS-->>Client: Signal: 'STOP'
+        Client->>PS: GET /ps/process/signals?claim=true&projectName=:name&clientInstanceId=:id
+        PS-->>Client: Leased signal: 'STOP'
     end
 
     Client->>Adapter: adapter.stop()
     Adapter->>Adapter: Terminate child processes (SIGTERM/SIGKILL)
     Adapter-->>Client: Status = 'STOPPED'
-    Client->>Orch: POST /orch/reporting/project/:name/is-stopped
-    Orch-->>Client: Status updated to 'stopped' in registry
+    Client->>PS: POST /ps/process/signals/:id/ack
+    Client->>PS: POST /ps/process/heartbeat (STOPPED)
 ```
 
 ---
@@ -125,13 +125,14 @@ sequenceDiagram
     Orch-->>User: Status changed to 'starting' (200)
 
     loop Metronome Beat
-        Client->>PS: GET /ps/process/signals?projectName=:name
-        PS-->>Client: Signal: 'START' (with ports)
+        Client->>PS: Claim next signal using clientInstanceId
+        PS-->>Client: Leased signal: 'START' (with ports)
     end
 
     Client->>Adapter: adapter.start(ports)
     Adapter->>Adapter: Spawn child processes on assigned ports
     Adapter-->>Client: Status = 'RUNNING'
+    Client->>PS: POST /ps/process/signals/:id/ack
 ```
 
 ---
@@ -150,15 +151,15 @@ sequenceDiagram
     Note over User,Orch: Only allowed when project status is 'stopped'
     User->>Orch: DELETE /orch/project/:name
     Orch->>PS: POST /ps/process/signals { action: 'DELETE' }
-    Orch->>Orch: Delete from local Orchestrator registry
-    Orch-->>User: Project removed (status: 'unregistered')
+    PS-->>Orch: DELETE queued
 
     loop Metronome Beat
-        Client->>PS: GET /ps/process/signals?projectName=:name
-        PS-->>Client: Signal: 'DELETE'
+        Client->>PS: Claim next signal using clientInstanceId
+        PS-->>Client: Leased signal: 'DELETE'
     end
 
-    Client->>PS: DELETE /ps/project/:name
+    Client->>PS: POST /ps/process/signals/:id/ack
+    PS->>PS: Remove project, heartbeat, and pending signals
     Client->>Client: Stop Metronome loop & cleanly exit daemon process
 ```
 

@@ -3,6 +3,7 @@ export type BeatCallback = (tickCount: number) => void | Promise<void>;
 export class BeatHolder {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private tickCount: number = 0;
+  private isTicking: boolean = false;
 
   constructor(private bpm: number, private onBeat: BeatCallback) {}
 
@@ -13,11 +14,16 @@ export class BeatHolder {
     const msPerBeat = (60 / this.bpm) * 1000;
 
     this.intervalId = setInterval(async () => {
+      if (this.isTicking) return;
+
+      this.isTicking = true;
       this.tickCount++;
       try {
         await this.onBeat(this.tickCount);
       } catch (err) {
         console.error('[BeatHolder] Error during onBeat callback execution:', err);
+      } finally {
+        this.isTicking = false;
       }
     }, msPerBeat);
   }

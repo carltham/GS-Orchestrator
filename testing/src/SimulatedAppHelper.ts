@@ -79,7 +79,7 @@ export function prepareSelectedProject(
   );
   fs.writeFileSync(
     path.join(configDir, 'sys-config.json'),
-    JSON.stringify({ pollIntervalMs: 100, heartbeatIntervalMs: 100 }, null, 2)
+    JSON.stringify({ pollIntervalMs: 500, heartbeatIntervalMs: 500 }, null, 2)
   );
 }
 
@@ -91,6 +91,7 @@ export function spawnSimulatedClient(testAppDir: string): ChildProcess {
   return spawn(process.execPath, [clientEntryPoint], {
     cwd: testAppDir,
     env: process.env,
+    detached: process.platform !== 'win32',
     stdio: 'inherit'
   });
 }
@@ -101,7 +102,11 @@ export function spawnSimulatedClient(testAppDir: string): ChildProcess {
 export function stopSimulatedClient(clientProcess: ChildProcess | undefined): void {
   if (clientProcess) {
     try {
-      clientProcess.kill('SIGTERM');
+      if (process.platform !== 'win32' && clientProcess.pid) {
+        process.kill(-clientProcess.pid, 'SIGTERM');
+      } else {
+        clientProcess.kill('SIGTERM');
+      }
     } catch (e) {
       // ignore close/stop issues
     }

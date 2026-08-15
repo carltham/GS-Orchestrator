@@ -2,8 +2,11 @@ import * as net from 'net';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { ProcessDetails, UnregisteredServer } from '../domain/ServerScannerTypes';
+
+const execFileAsync = promisify(execFile);
 
 export class PureServerScannerService {
   /**
@@ -60,17 +63,17 @@ export class PureServerScannerService {
   /**
    * Probe process details (PID, working directory, project name, command) for a listening port
    */
-  private inspectProcessOnPort(port: number): ProcessDetails {
+  private async inspectProcessOnPort(port: number): Promise<ProcessDetails> {
     const details: ProcessDetails = {};
 
     try {
       // Find listening PID on Linux using lsof
-      const lsofOut = execSync(`lsof -i :${port} -sTCP:LISTEN -t`, {
+      const { stdout: lsofOut } = await execFileAsync('lsof', ['-i', `:${port}`, '-sTCP:LISTEN', '-t'], {
         encoding: 'utf-8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }).trim();
+        timeout: 2000
+      });
 
-      const pids = lsofOut.split('\n').map((p) => parseInt(p.trim(), 10)).filter((p) => !isNaN(p));
+      const pids = lsofOut.trim().split('\n').map((p) => parseInt(p.trim(), 10)).filter((p) => !isNaN(p));
       if (pids.length > 0) {
         const pid = pids[0];
         details.pid = pid;
@@ -82,11 +85,11 @@ export class PureServerScannerService {
             details.projectPath = cwdPath;
             details.projectName = path.basename(cwdPath);
           } else {
-            const pwdxOut = execSync(`pwdx ${pid}`, {
+            const { stdout: pwdxOut } = await execFileAsync('pwdx', [String(pid)], {
               encoding: 'utf-8',
-              stdio: ['ignore', 'pipe', 'ignore'],
-            }).trim();
-            const cwd = pwdxOut.split(': ')[1]?.trim();
+              timeout: 2000
+            });
+            const cwd = pwdxOut.trim().split(': ')[1]?.trim();
             if (cwd) {
               details.projectPath = cwd;
               details.projectName = path.basename(cwd);
@@ -170,7 +173,7 @@ export class PureServerScannerService {
         if (!occupied) return null;
 
         const type = await this.probeHttpType(p);
-        const processInfo = this.inspectProcessOnPort(p);
+        const processInfo = await this.inspectProcessOnPort(p);
 
         // Check if process projectPath belongs to any registered project directory
         if (processInfo.projectPath) {

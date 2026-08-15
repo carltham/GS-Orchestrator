@@ -18,15 +18,32 @@ export class SignalProcessor {
    */
   public async pollAndProcess(): Promise<void> {
     try {
-      const res = await fetch(`${this.state.processServerUrl}/ps/process/signals?projectName=${encodeURIComponent(this.state.projectName)}`);
+      const query = new URLSearchParams({
+        projectName: this.state.projectName,
+        clientInstanceId: this.state.clientInstanceId,
+        claim: 'true'
+      });
+      const res = await fetch(`${this.state.processServerUrl}/ps/process/signals?${query.toString()}`);
       if (!res.ok) return;
 
       const data = await res.json() as { signals?: Array<{ id: string; action: string; ports?: { [key: string]: number } }> };
       const signals = data.signals || [];
 
-      for (const [key, val] of Object.entries(signals)) {
+      for (const val of signals) {
         const signal = val as { id: string; action: string; ports?: { [key: string]: number } };
-        await this.executeSignal(signal);
+        try {
+          const stopAfterAcknowledge = await this.executeSignal(signal);
+          const acknowledged = await this.settleSignal(signal.id, 'ack');
+          if (!acknowledged) {
+            throw new Error(`Could not acknowledge signal ${signal.id}`);
+          }
+          if (stopAfterAcknowledge) {
+            await this.stopCallback();
+          }
+        } catch (err: any) {
+          await this.settleSignal(signal.id, 'nack');
+          this.logger.log(`Signal ${signal.id} failed: ${err.message}`, 'ERROR');
+        }
       }
     } catch (err: any) {
       this.logger.log(`Poll signals failed: ${err.message}`, 'WARN');
@@ -36,56 +53,55 @@ export class SignalProcessor {
   /**
    * Execute specified signal action
    */
-  private async executeSignal(signal: { id: string; action: string; ports?: { [key: string]: number } }): Promise<void> {
+  private async executeSignal(signal: { id: string; action: string; ports?: { [key: string]: number } }): Promise<boolean> {
     this.logger.log(`Received control plane signal: ${signal.action} (ID: ${signal.id})`);
     
-    if (!this.state.adapter) return;
+    if (!this.state.adapter) throw new Error('No process adapter is configured');
 
     switch (signal.action) {
       case 'START':
         this.logger.log(`Executing START signal via adapter...`);
         await this.state.adapter.start(signal.ports);
-        break;
+        return false;
 
       case 'STOP':
         this.logger.log(`Executing STOP signal via adapter...`);
         await this.state.adapter.stop();
-        break;
+        return false;
 
       case 'DELETE':
-        await this.handleDelete();
-        break;
+        return this.prepareDelete();
 
       default:
-        this.logger.log(`Unknown control plane signal received: ${signal.action}`, 'WARN');
-        break;
+        throw new Error(`Unknown control plane signal: ${signal.action}`);
     }
   }
 
-  /**
-   * Handle unregistration and metronome stop for DELETE action
-   */
-  private async handleDelete(): Promise<void> {
-    if (!this.state.adapter) return;
-
+  private async prepareDelete(): Promise<boolean> {
+    if (!this.state.adapter) throw new Error('No process adapter is configured');
     this.logger.log(`Executing DELETE signal...`);
     const status = await this.state.adapter.getStatus();
+    if (status.status === 'RUNNING') {
+      throw new Error(`Cannot delete an active application (status: ${status.status})`);
+    }
+    this.logger.log(`Target project is stopped. Acknowledging deletion and shutting down client...`);
+    return true;
+  }
 
-    if (status.status !== 'RUNNING') {
-      this.logger.log(`Target project is stopped. Unregistering and shutting down client...`);
-      try {
-        await fetch(`${this.state.processServerUrl}/ps/project/${encodeURIComponent(this.state.projectName)}`, {
-          method: 'DELETE'
-        });
-        this.logger.log(`Deregistered from ProcessServer.`);
-      } catch (err: any) {
-        this.logger.log(`Could not notify ProcessServer of unregistration: ${err.message}`, 'WARN');
-      }
-      
-      // Stop the metronome loop and allow Node.js event loop to cleanly empty
-      await this.stopCallback();
-    } else {
-      this.logger.log(`Cannot execute DELETE: target application is still active (status: ${status.status})`, 'ERROR');
+  private async settleSignal(signalId: string, result: 'ack' | 'nack'): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.state.processServerUrl}/ps/process/signals/${encodeURIComponent(signalId)}/${result}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientInstanceId: this.state.clientInstanceId })
+        }
+      );
+      return response.ok;
+    } catch (err: any) {
+      this.logger.log(`Could not ${result} signal ${signalId}: ${err.message}`, 'WARN');
+      return false;
     }
   }
 }

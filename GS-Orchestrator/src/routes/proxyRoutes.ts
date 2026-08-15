@@ -1,4 +1,5 @@
 import http from 'http';
+import * as crypto from 'crypto';
 import { Request, Response, Router } from 'express';
 
 const PROCESS_SERVER_URL = process.env.PROCESS_SERVER_URL || 'http://localhost:9999';
@@ -10,12 +11,18 @@ export function createProxyRoutes(): Router {
   const router = Router();
   const psUrl = new URL(PROCESS_SERVER_URL);
 
-  const forwardToProcessServer = (targetPath: string, req: Request, res: Response) => {
+  const forwardToProcessServer = (
+    targetPath: string,
+    req: Request,
+    res: Response,
+    attempt = 0,
+    method: string = req.method
+  ) => {
     const options: http.RequestOptions = {
       hostname: psUrl.hostname,
       port: psUrl.port || 9999,
       path: targetPath + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''),
-      method: req.method,
+      method,
       headers: {
         ...req.headers,
         host: `${psUrl.hostname}:${psUrl.port || 9999}`
@@ -27,7 +34,15 @@ export function createProxyRoutes(): Router {
       proxyRes.pipe(res, { end: true });
     });
 
+    proxyReq.setTimeout(5000, () => {
+      proxyReq.destroy(new Error('ProcessServer request timed out'));
+    });
+
     proxyReq.on('error', (err) => {
+      if (attempt < 1 && !res.headersSent) {
+        forwardToProcessServer(targetPath, req, res, attempt + 1, method);
+        return;
+      }
       console.error(`[Orchestrator:Proxy] Failed forwarding ${req.method} ${targetPath}:`, err.message);
       if (!res.headersSent) {
         res.status(502).json({
@@ -38,7 +53,7 @@ export function createProxyRoutes(): Router {
       }
     });
 
-    if (req.body && Object.keys(req.body).length > 0 && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    if (req.body && Object.keys(req.body).length > 0 && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       const bodyData = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
       proxyReq.setHeader('Content-Type', 'application/json');
       proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
@@ -107,28 +122,45 @@ export function createProxyRoutes(): Router {
   // 7. /orch/project/:name/start -> POST /ps/process/signals (action: START)
   router.post('/orch/project/:name/start', (req: Request, res: Response) => {
     const projectName = req.params.name;
-    req.body = { targetProject: projectName, action: 'START' };
+    req.body = {
+      targetProject: projectName,
+      action: 'START',
+      idempotencyKey: req.get('Idempotency-Key') || crypto.randomUUID()
+    };
     forwardToProcessServer('/ps/process/signals', req, res);
   });
 
   // 8. /orch/project/:name/stop -> POST /ps/process/signals (action: STOP)
   router.post('/orch/project/:name/stop', (req: Request, res: Response) => {
     const projectName = req.params.name;
-    req.body = { targetProject: projectName, action: 'STOP' };
+    req.body = {
+      targetProject: projectName,
+      action: 'STOP',
+      idempotencyKey: req.get('Idempotency-Key') || crypto.randomUUID()
+    };
     forwardToProcessServer('/ps/process/signals', req, res);
   });
 
   // 9. /orch/project/:name/restart -> POST /ps/process/signals (action: START)
   router.post('/orch/project/:name/restart', (req: Request, res: Response) => {
     const projectName = req.params.name;
-    req.body = { targetProject: projectName, action: 'START' };
+    req.body = {
+      targetProject: projectName,
+      action: 'START',
+      idempotencyKey: req.get('Idempotency-Key') || crypto.randomUUID()
+    };
     forwardToProcessServer('/ps/process/signals', req, res);
   });
 
-  // 10. DELETE /orch/project/:name -> DELETE /ps/project/:name
+  // 10. DELETE /orch/project/:name -> queue DELETE for the owning client
   router.delete('/orch/project/:name', (req: Request, res: Response) => {
     const projectName = req.params.name;
-    forwardToProcessServer(`/ps/project/${encodeURIComponent(projectName)}`, req, res);
+    req.body = {
+      targetProject: projectName,
+      action: 'DELETE',
+      idempotencyKey: req.get('Idempotency-Key') || crypto.randomUUID()
+    };
+    forwardToProcessServer('/ps/process/signals', req, res, 0, 'POST');
   });
 
   return router;
