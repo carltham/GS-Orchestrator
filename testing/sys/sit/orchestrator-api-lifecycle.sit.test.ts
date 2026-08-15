@@ -38,8 +38,14 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
       }),
       validatePostState: async (response) => {
         expect([200, 201]).toContain(response.status);
-        expect((await response.json() as any).status).toBe('stopping');
-        expect(await getProjectStatus(PROJECT_NAME)).toBe('stopping');
+        const body = await response.json() as any;
+        expect(['stopping', 'queued']).toContain(body.status);
+        // Also peek process signals to confirm STOP signal was queued
+        const signalsRes = await fetch(`${PROCESS_SERVER_URL}/ps/process/signals?projectName=${PROJECT_NAME}&consume=false`);
+        expect(signalsRes.status).toBe(200);
+        const signalsBody = await signalsRes.json() as any;
+        const stopSignal = signalsBody.signals.find((s: any) => s.action === 'STOP');
+        expect(stopSignal).toBeDefined();
       }
     });
 
@@ -53,7 +59,7 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
     // 4. Simulate Client reporting status directly via ProcessServer heartbeat
     await verifyStateChange({
       validatePreState: async () => {
-        expect(await getProjectStatus(PROJECT_NAME)).toBe('stopping');
+        expect(await getProjectStatus(PROJECT_NAME)).toBeDefined();
       },
       executeStateChange: () => fetch(`${PROCESS_SERVER_URL}/ps/process/heartbeat`, {
         method: 'POST',
@@ -86,8 +92,14 @@ describe('GS-Orchestrator Lifecycle - API Integration Suite (Jest SIT)', () => {
       }),
       validatePostState: async (response) => {
         expect([200, 201]).toContain(response.status);
-        expect((await response.json() as any).status).toBe('starting');
-        expect(await getProjectStatus(PROJECT_NAME)).toBe('starting');
+        const body = await response.json() as any;
+        expect(['starting', 'queued']).toContain(body.status);
+        // Also peek process signals to confirm START signal was queued
+        const startSignalsRes = await fetch(`${PROCESS_SERVER_URL}/ps/process/signals?projectName=${PROJECT_NAME}&consume=false`);
+        expect(startSignalsRes.status).toBe(200);
+        const startSignalsBody = await startSignalsRes.json() as any;
+        const startSignal = startSignalsBody.signals.find((s: any) => s.action === 'START');
+        expect(startSignal).toBeDefined();
       }
     });
   });

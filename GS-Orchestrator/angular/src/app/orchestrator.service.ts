@@ -17,6 +17,7 @@ export interface ProjectEntry {
   components: Record<string, SubSystemInfo>;
   status: string;
   ticket?: string;
+  unstoppable?: boolean;
 }
 
 export interface UnregisteredServer {

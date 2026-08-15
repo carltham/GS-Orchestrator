@@ -83,6 +83,14 @@ export class ProjectsPageComponent implements OnInit {
     if (!this.selectedProject) return;
 
     const projectName = this.selectedProject.name;
+    if (this.selectedProject.unstoppable || projectName === 'GS-Orchestrator') {
+      await this.dialogService.alert(
+        'Action forbidden: Cannot stop or unregister the main Orchestrator service itself, as it is the central administration hub.',
+        'Action Forbidden'
+      );
+      return;
+    }
+
     const confirmed = await this.dialogService.confirm(
       `Are you sure you want to stop project "${projectName}"?`,
       'Stop Project'
@@ -111,6 +119,14 @@ export class ProjectsPageComponent implements OnInit {
     if (!this.selectedProject) return;
 
     const projectName = this.selectedProject.name;
+    if (this.selectedProject.unstoppable || projectName === 'GS-Orchestrator') {
+      await this.dialogService.alert(
+        'Action forbidden: Cannot stop or unregister the main Orchestrator service itself, as it is the central administration hub.',
+        'Action Forbidden'
+      );
+      return;
+    }
+
     const confirmed = await this.dialogService.confirm(
       `Are you sure you want to remove project "${projectName}" from the registry?`,
       'Remove Project'

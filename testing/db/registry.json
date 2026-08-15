@@ -3,7 +3,7 @@
     "TestApp": {
       "name": "TestApp",
       "path": "/tmp/testapp",
-      "registeredAt": "2026-08-15T13:14:09.192Z",
+      "registeredAt": "2026-08-15T21:12:00.835Z",
       "components": {
         "backend::node-ts": {
           "port": 3000,
@@ -21,12 +21,13 @@
           "pid": null
         }
       },
-      "status": "running"
+      "status": "running",
+      "unstoppable": false
     },
     "GS-Orchestrator": {
       "name": "GS-Orchestrator",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
-      "registeredAt": "2026-08-15T13:14:09.200Z",
+      "registeredAt": "2026-08-15T21:12:00.861Z",
       "components": {
         "backend::node-ts": {
           "port": 10000,
@@ -39,12 +40,13 @@
           "pid": null
         }
       },
-      "status": "running"
+      "status": "running",
+      "unstoppable": true
     },
     "IdempotentApp": {
       "name": "IdempotentApp",
       "path": "/tmp/idempotent",
-      "registeredAt": "2026-08-15T13:14:09.267Z",
+      "registeredAt": "2026-08-15T21:12:00.965Z",
       "components": {
         "backend::node-ts": {
           "port": 3003,
@@ -52,9 +54,10 @@
           "pid": null
         }
       },
-      "status": "running"
+      "status": "running",
+      "unstoppable": false
     }
   },
   "nextPortBase": 4200,
-  "lastUpdated": "2026-08-15T13:14:09.267Z"
+  "lastUpdated": "2026-08-15T21:12:00.965Z"
 }

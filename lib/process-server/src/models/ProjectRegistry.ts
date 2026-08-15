@@ -6,6 +6,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as net from 'net';
+import { SystemConfigService } from '../services/SystemConfigService';
 
 export interface SubSystemInfo {
   port: number;
@@ -30,6 +31,7 @@ export interface ProjectEntry {
   status: 'start' | 'starting' | 'running' | 'partially' | 'stop' | 'stopping' | 'stopped';
   pid?: number | null;
   ticket?: string;
+  unstoppable?: boolean;
 }
 
 export interface RegistryData {
@@ -147,7 +149,7 @@ export class ProjectRegistry {
       // If already allocated, check if the previously assigned port is currently conflicting with a client-reported active port (e.g. host service/docker)
       if (matchedCompKey) {
         const currentPort = componentsPorts[matchedCompKey].port;
-        if (name !== 'GS-Orchestrator' && name !== 'gs-orchestrator' && (excludedPorts.has(currentPort) || this.isPortActive(currentPort))) {
+        if (name !== 'GS-Orchestrator' && name !== 'gs-orchestrator' && (!Number.isFinite(currentPort) || excludedPorts.has(currentPort) || this.isPortActive(currentPort))) {
           // Re-allocate avoiding excluded ports
           const allocatedPort = this.allocatePort(name, serviceName, serviceType, data, excludedPorts);
           componentsPorts[matchedCompKey].port = allocatedPort;
@@ -165,6 +167,8 @@ export class ProjectRegistry {
       }
     }
 
+    const isProtected = SystemConfigService.getInstance().isProtectedService(name);
+
     const entry: ProjectEntry = {
       name,
       path: projectPath,
@@ -173,6 +177,7 @@ export class ProjectRegistry {
       components: componentsPorts,
       status: 'running',
       ticket,
+      unstoppable: isProtected
     };
 
     data.projects[name] = entry;
@@ -232,11 +237,19 @@ export class ProjectRegistry {
 
   public getProject(name: string): ProjectEntry | undefined {
     const data = this.load();
-    return data.projects[name];
+    const project = data.projects[name];
+    if (project) {
+      project.unstoppable = SystemConfigService.getInstance().isProtectedService(name);
+    }
+    return project;
   }
 
   public getProjects(): Record<string, ProjectEntry> {
     const data = this.load();
+    const sysConfig = SystemConfigService.getInstance();
+    for (const [name, project] of Object.entries(data.projects)) {
+      project.unstoppable = sysConfig.isProtectedService(name);
+    }
     return data.projects;
   }
 

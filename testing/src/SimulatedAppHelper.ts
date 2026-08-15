@@ -88,7 +88,7 @@ export function prepareSelectedProject(
  */
 export function spawnSimulatedClient(testAppDir: string): ChildProcess {
   const clientEntryPoint = path.resolve(testAppDir, '..', '..', '..', 'lib', 'process-client', 'dist', 'index.js');
-  return spawn('node', [clientEntryPoint], {
+  return spawn(process.execPath, [clientEntryPoint], {
     cwd: testAppDir,
     env: process.env,
     stdio: 'inherit'
