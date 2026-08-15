@@ -35,7 +35,7 @@ export function prepareRoutes(
 }
 
 export function prepareStaticAssets(expressApp: Express): void {
-  const guiDistPath = path.join(__dirname, '..', '..', 'GS-Orchestrator-GUI', 'dist', 'gs-orchestrator-gui', 'browser');
+  const guiDistPath = path.join(__dirname, '..', 'angular', 'dist', 'gs-orchestrator-gui', 'browser');
   
   // Static GUI Asset Hosting
   expressApp.use(express.static(guiDistPath));

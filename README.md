@@ -82,8 +82,9 @@ curl -sSL http://localhost:9999/install.js | node
 
 ```
 .
-├── GS-Orchestrator/        # Express API backend server (Port 10000)
-├── GS-Orchestrator-GUI/    # Angular 17 Control Center UI (Port 9001)
+├── GS-Orchestrator/        # Express API backend & static UI host (Port 10000)
+│   ├── src/                # Node/Express server & reverse proxy
+│   └── angular/            # Angular 17 Control Center UI source
 ├── lib/
 │   ├── process-client/     # @gs/process-client runtime daemon & CLI
 │   └── process-server/     # @gs/process-server registry & signal daemon (Port 9999)

@@ -9,7 +9,8 @@ This document defines the architectural design, workspace layout, and lifecycle 
 ```
 GS-Orchestrator Workspace
 ├── GS-Orchestrator/                # Orchestrator Registry & Control Center Core (Node/Express :10000 serving compiled GUI statically)
-├── GS-Orchestrator-GUI/            # Angular Frontend Source (Compiled to dist and served statically by GS-Orchestrator)
+│   ├── src/                        # Express server & API routes
+│   └── angular/                    # Angular Frontend Source (Compiled to dist and served statically by GS-Orchestrator)
 ├── lib/
 │   ├── process-server/             # ProcessServer Microservice (Runs on dedicated fixed port :9999)
 │   │   ├── src/
@@ -22,7 +23,7 @@ GS-Orchestrator Workspace
 │       ├── src/
 │       │   ├── index.ts            # Client runtime entrypoint
 │       │   ├── client/             # ProcessClient engine
-│       │   └── api/                # ApiClient (/api/register, /api/health, /api/signals)
+│       │   └── api/                # ApiClient (/orch/project/register, /orch/reporting, /ps/process/signals)
 │       └── package.json
 └── architecture/
     ├── ORCHESTRATOR_ARCHITECTURE.md # Orchestrator Business Core Blueprint
@@ -88,7 +89,7 @@ sequenceDiagram
    - `GS-Orchestrator` (running on port **10000**) **can only be stopped or taken offline via an explicit `curl` shutdown request sent to `ProcessServer`** (e.g. `curl -X POST http://localhost:9999/api/orchestrator/shutdown`).
    - Upon receiving the `curl` shutdown request, `ProcessServer` queues a shutdown control signal to `GS-Orchestrator`'s local `ProcessClient`, which invokes `ProcessAdapter.js.stop()` to perform a graceful shutdown of the orchestrator server.
 5. **Static Frontend GUI Deployment**:
-   - `GS-Orchestrator-GUI` (Angular) is compiled to static files (`ng build`) and deployed directly to the `GS-Orchestrator` Node/Express server (port **10000**), which serves them statically via `express.static()`.
+   - `GS-Orchestrator/angular` (Angular) is compiled to static files (`ng build`) and deployed directly to the `GS-Orchestrator` Node/Express server (port **10000**), which serves them statically via `express.static()`.
 6. **Nomenclature & Role Definitions**:
    - **`ProcessServer`**: Central control server microservice in `lib/process-server/` (`:9999`) that handles registration, port allocation, control signals, and compiles the project's tailored `ProcessAdapter.js`.
    - **`ProcessClient`**: Runtime package (`lib/process-client/`, `@gs/process-client`) deployed to target projects to manage control polling, health heartbeats, and launcher loops.

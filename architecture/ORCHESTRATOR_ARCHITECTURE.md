@@ -1,4 +1,4 @@
-# GS-Orchestrator Architecture Blueprint (`GS-Orchestrator` & `GS-Orchestrator-GUI`)
+# GS-Orchestrator Architecture Blueprint (`GS-Orchestrator`)
 
 This document defines the architectural design, component responsibilities, data layer specifications, and frontend hosting model for the **GS-Orchestrator Core Registry & Control Center**.
 
@@ -10,7 +10,7 @@ This document defines the architectural design, component responsibilities, data
 1. **Service Registry & Dynamic Port Management**: Keeps track of all registered ecosystem projects, allocated ports, and component health.
 2. **Server Scanner & Unregistered Detection**: Automatically scans local network ports to detect unregistered running servers.
 3. **User Authentication & Role-Based Access Control**: Handles login, sessions, and superadmin authorization for managing users and project signals.
-4. **Control Center Web GUI Hosting**: Hosts the compiled Angular frontend (`GS-Orchestrator-GUI`) statically on its Node/Express server on port **10000**.
+4. **Control Center Web GUI Hosting**: Hosts the compiled Angular frontend (`GS-Orchestrator/angular/`) statically on its Node/Express server on port **10000**.
 5. **Integration with `ProcessServer`**: Communicates with the standalone `ProcessServer` (`lib/process-server/` on port **9999**) for process lifecycle operations and control signals.
 
 ---
@@ -22,28 +22,22 @@ GS-Orchestrator Workspace
 ├── GS-Orchestrator/                # Orchestrator Registry & Control Center Core (Node/Express :10000)
 │   ├── src/
 │   │   ├── server.ts               # Express server entrypoint & static GUI host (:10000)
+│   │   ├── app.ts                  # App configuration & middleware
 │   │   ├── domain/                 # Domain interfaces & TypeScript types
-│   │   ├── routes/                 # Express API routes
-│   │   │   ├── authRoutes.ts       # Authentication endpoints (/auth)
-│   │   │   ├── adminRoutes.ts      # User management endpoints (/admin)
+│   │   ├── routes/                 # Express API & proxy routes
+│   │   │   ├── authRoutes.ts       # Authentication endpoints (/orch/auth)
+│   │   │   ├── adminRoutes.ts      # User management endpoints (/orch/admin)
 │   │   │   ├── healthRoutes.ts     # Project health reports (/orch/reporting)
-│   │   │   ├── registrationRoutes.ts # Project registration & port allocation (/orch/project)
-│   │   │   ├── registryRoutes.ts   # Registry querying & management (/orch/project)
-│   │   │   └── scannerRoutes.ts    # Unregistered server scanner (/orch/project/unregistered)
-│   │   ├── services/               # Core business logic services
-│   │   │   ├── PortAllocatorService.ts # Non-conflicting port assignment
-│   │   │   ├── RegistryService.ts      # Persistent project registry state
-│   │   │   ├── ServerScannerService.ts  # Network port scanner
-│   │   │   └── UserService.ts          # Authentication & user store
-│   │   └── utils/
-│   │       └── selfDetector.ts     # Self-identification utility
-│   ├── processAdapter.js           # Runnable ProcessAdapter.js for Orchestrator itself
+│   │   │   └── proxyRoutes.ts      # Reverse proxy to ProcessServer (:9999)
+│   │   └── services/               # Core business logic services
+│   │       └── UserService.ts      # Authentication & user store
+│   ├── angular/                    # Angular Control Center Frontend
+│   │   ├── src/                    # Angular SPA source code
+│   │   ├── angular.json            # Angular CLI configuration (build output: dist/)
+│   │   └── package.json
+│   ├── ProcessAdapter.js           # Runnable ProcessAdapter.js for Orchestrator itself
 │   ├── package.json
 │   └── tsconfig.json
-├── GS-Orchestrator-GUI/            # Angular Control Center Frontend
-│   ├── src/                        # Angular SPA source code
-│   ├── angular.json                # Angular CLI configuration (build output: dist/)
-│   └── package.json
 ├── lib/
 │   ├── process-server/             # Standalone ProcessServer Engine (:9999)
 │   └── process-client/             # ProcessClient Runtime Library (@gs/process-client)
@@ -58,10 +52,10 @@ GS-Orchestrator Workspace
 ## 🎯 Architectural Principles
 
 1. **Separation of Concerns**:
-   - **`GS-Orchestrator`**: Responsible **strictly** for business domain features: registry, user accounts, UI hosting, and project catalog management on port **10000**.
-   - **`ProcessServer` (`:9999`)**: Responsible **strictly** for process management mechanisms: compiling `ProcessAdapter.js`, serving installer scripts over `curl`, and queuing process control signals.
+   - **`GS-Orchestrator`**: Responsible **strictly** for business domain features: registry proxying, user accounts, UI hosting, and project catalog management on port **10000**.
+   - **`ProcessServer` (`:9999`)**: Responsible **strictly** for process management mechanisms: compiling `ProcessAdapter.js`, serving installer scripts over `curl`, port allocation, host tracking, and process control signals.
 2. **Unified Single-Port Deployment**:
-   - The compiled Angular GUI (`GS-Orchestrator-GUI/dist`) is served directly by the `GS-Orchestrator` Express server (`:10000`) using `express.static()`.
+   - The compiled Angular GUI (`GS-Orchestrator/angular/dist/gs-orchestrator-gui/browser`) is served directly by the `GS-Orchestrator` Express server (`:10000`) using `express.static()`.
    - Eliminates the need for a separate frontend server process (e.g. Angular CLI on `:9001`) in production.
 3. **Control via `ProcessServer`**:
    - `GS-Orchestrator` is managed like any other ecosystem project by its own local `ProcessClient` and `ProcessAdapter.js`.
@@ -95,7 +89,7 @@ import path from 'path';
 import express from 'express';
 
 const app = express();
-const GUI_DIST_PATH = path.join(__dirname, '..', '..', 'GS-Orchestrator-GUI', 'dist');
+const GUI_DIST_PATH = path.join(__dirname, '..', 'angular', 'dist', 'gs-orchestrator-gui', 'browser');
 
 // Serve compiled Angular static assets
 app.use(express.static(GUI_DIST_PATH));
