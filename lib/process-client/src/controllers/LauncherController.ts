@@ -19,7 +19,7 @@ export class LauncherController {
     this.logger = logger;
     this.telemetry = telemetry;
     this.signalProcessor = new SignalProcessor(this.state, this.logger, async () => {
-      await this.stop();
+      this.requestStop();
     });
     this.telemetryProcessor = new TelemetryProcessor(this.state, this.logger, this.telemetry);
   }
@@ -74,12 +74,19 @@ export class LauncherController {
     const defaultBpm = 60000 / this.state.pollIntervalMs;
     this.state.metronome = new BeatHolder(defaultBpm, async (tick) => {
       await this.signalProcessor.pollAndProcess();
+      if (!this.state.isRunning) return;
       await this.telemetryProcessor.sendHeartbeat();
     });
     this.state.metronome.start();
   }
 
   public async stop(): Promise<void> {
+    const metronome = this.state.metronome;
+    this.requestStop();
+    await metronome?.waitForIdle();
+  }
+
+  private requestStop(): void {
     this.state.isRunning = false;
     if (this.state.metronome) {
       this.state.metronome.stop();
@@ -105,6 +112,7 @@ export class LauncherController {
       const newBpm = 60000 / this.state.pollIntervalMs;
       this.state.metronome = new BeatHolder(newBpm, async (tick) => {
         await this.signalProcessor.pollAndProcess();
+          if (!this.state.isRunning) return;
         await this.telemetryProcessor.sendHeartbeat();
       });
       this.state.metronome.start();

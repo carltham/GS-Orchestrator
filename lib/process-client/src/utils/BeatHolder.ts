@@ -3,7 +3,7 @@ export type BeatCallback = (tickCount: number) => void | Promise<void>;
 export class BeatHolder {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private tickCount: number = 0;
-  private isTicking: boolean = false;
+  private activeBeat: Promise<void> | null = null;
 
   constructor(private bpm: number, private onBeat: BeatCallback) {}
 
@@ -13,18 +13,21 @@ export class BeatHolder {
     // Calculate millisecond interval from Beats Per Minute (BPM)
     const msPerBeat = (60 / this.bpm) * 1000;
 
-    this.intervalId = setInterval(async () => {
-      if (this.isTicking) return;
+    this.intervalId = setInterval(() => {
+      if (this.activeBeat) return;
 
-      this.isTicking = true;
       this.tickCount++;
-      try {
-        await this.onBeat(this.tickCount);
-      } catch (err) {
-        console.error('[BeatHolder] Error during onBeat callback execution:', err);
-      } finally {
-        this.isTicking = false;
-      }
+      const activeBeat = Promise.resolve()
+        .then(() => this.onBeat(this.tickCount))
+        .catch((err) => {
+          console.error('[BeatHolder] Error during onBeat callback execution:', err);
+        })
+        .finally(() => {
+          if (this.activeBeat === activeBeat) {
+            this.activeBeat = null;
+          }
+        });
+      this.activeBeat = activeBeat;
     }, msPerBeat);
   }
 
@@ -33,6 +36,10 @@ export class BeatHolder {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+  }
+
+  public async waitForIdle(): Promise<void> {
+    await this.activeBeat;
   }
 
   public reset(): void {
