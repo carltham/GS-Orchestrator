@@ -3,7 +3,7 @@
     "TestApp": {
       "name": "TestApp",
       "path": "/tmp/testapp",
-      "registeredAt": "2026-08-16T08:50:30.932Z",
+      "registeredAt": "2026-08-16T09:51:40.768Z",
       "components": {
         "backend::node-ts": {
           "port": 3000,
@@ -27,7 +27,7 @@
     "GS-Orchestrator": {
       "name": "GS-Orchestrator",
       "path": "/mnt/DATA/Projects/0.present-projects/Active/GS-Orchestrator",
-      "registeredAt": "2026-08-16T08:50:30.938Z",
+      "registeredAt": "2026-08-16T09:51:40.781Z",
       "components": {
         "backend::node-ts": {
           "port": 10000,
@@ -46,7 +46,7 @@
     "IdempotentApp": {
       "name": "IdempotentApp",
       "path": "/tmp/idempotent",
-      "registeredAt": "2026-08-16T08:50:30.997Z",
+      "registeredAt": "2026-08-16T09:51:40.852Z",
       "components": {
         "backend::node-ts": {
           "port": 3003,
@@ -56,8 +56,32 @@
       },
       "status": "running",
       "unstoppable": false
+    },
+    "PreferredPortApp": {
+      "name": "PreferredPortApp",
+      "path": "/tmp/preferred-port-app",
+      "registeredAt": "2026-08-16T09:51:40.787Z",
+      "components": {
+        "backend::backend": {
+          "port": 3001,
+          "status": "running",
+          "pid": null
+        },
+        "frontend::frontend": {
+          "port": 5173,
+          "status": "running",
+          "pid": null
+        },
+        "database::database": {
+          "port": 5433,
+          "status": "running",
+          "pid": null
+        }
+      },
+      "status": "running",
+      "unstoppable": false
     }
   },
   "nextPortBase": 4200,
-  "lastUpdated": "2026-08-16T08:50:30.997Z"
+  "lastUpdated": "2026-08-16T09:51:40.852Z"
 }

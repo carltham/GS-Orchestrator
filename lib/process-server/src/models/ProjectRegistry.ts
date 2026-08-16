@@ -128,6 +128,7 @@ export class ProjectRegistry {
     ticket?: string,
     host?: HostInfo,
     occupiedPorts?: number[],
+    preferredPorts?: Record<string, number>,
     clientInstanceId?: string
   ): ProjectEntry {
     const data = this.load();
@@ -151,7 +152,10 @@ export class ProjectRegistry {
       // If already allocated, check if the previously assigned port is currently conflicting with a client-reported active port (e.g. host service/docker)
       if (matchedCompKey) {
         const currentPort = componentsPorts[matchedCompKey].port;
-        if (name !== 'GS-Orchestrator' && name !== 'gs-orchestrator' && (!Number.isFinite(currentPort) || excludedPorts.has(currentPort) || this.isPortActive(currentPort))) {
+        const preferredPort = preferredPorts?.[serviceName];
+        if (this.canUsePreferredPort(name, preferredPort, data, excludedPorts)) {
+          componentsPorts[matchedCompKey].port = preferredPort;
+        } else if (name !== 'GS-Orchestrator' && name !== 'gs-orchestrator' && (!Number.isFinite(currentPort) || excludedPorts.has(currentPort) || this.isPortActive(currentPort))) {
           // Re-allocate avoiding excluded ports
           const allocatedPort = this.allocatePort(name, serviceName, serviceType, data, excludedPorts);
           componentsPorts[matchedCompKey].port = allocatedPort;
@@ -159,7 +163,10 @@ export class ProjectRegistry {
           componentsPorts[matchedCompKey].port = 10000;
         }
       } else {
-        const allocatedPort = this.allocatePort(name, serviceName, serviceType, data, excludedPorts);
+        const preferredPort = preferredPorts?.[serviceName];
+        const allocatedPort = this.canUsePreferredPort(name, preferredPort, data, excludedPorts)
+          ? preferredPort
+          : this.allocatePort(name, serviceName, serviceType, data, excludedPorts);
         const compKeyWithService = `${serviceName}::${serviceType}`;
         componentsPorts[compKeyWithService] = {
           port: allocatedPort,
@@ -225,6 +232,20 @@ export class ProjectRegistry {
     }
 
     return candidatePort;
+  }
+
+  private canUsePreferredPort(
+    projectName: string,
+    preferredPort: number | undefined,
+    data: RegistryData,
+    excludedPorts: Set<number>
+  ): preferredPort is number {
+    if (!Number.isInteger(preferredPort) || preferredPort! <= 0 || preferredPort! > 65535) return false;
+    if (excludedPorts.has(preferredPort!)) return false;
+    return !Object.entries(data.projects).some(([otherName, project]) =>
+      otherName !== projectName
+      && Object.values(project.components || {}).some((component) => component.port === preferredPort)
+    );
   }
 
   private isPortActive(port: number): boolean {

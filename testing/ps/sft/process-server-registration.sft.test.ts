@@ -71,6 +71,18 @@ describe('ProcessServer SFT - Project Registration & Port Allocation', () => {
     expect(res.body.components['frontend::angular'].port).toBe(10000);
   });
 
+  test('honors inspected preferred ports when they are available', async () => {
+    const res = await request(app).post('/ps/project/register').send({
+      projectName: 'PreferredPortApp',
+      path: '/tmp/preferred-port-app',
+      serviceTypes: { backend: 'backend', frontend: 'frontend', database: 'database' },
+      preferredPorts: { backend: 3001, frontend: 5173, database: 5433 }
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ports).toEqual({ backend: 3001, frontend: 5173, database: 5433 });
+  });
+
   test('idempotency: returning existing registration for already registered project', async () => {
     const payload = {
       projectName: 'IdempotentApp',

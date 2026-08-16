@@ -85,6 +85,22 @@ export class InstallerController {
   // POST /ps/installer/generate
   public generateAdapter(req: Request, res: Response): void {
     const payload: InspectionPayload = req.body || {};
+    if (!payload.projectName || !Array.isArray(payload.components) || payload.components.length === 0) {
+      res.status(400).json({ error: 'projectName and at least one discovered component are required' });
+      return;
+    }
+    const invalidComponent = payload.components.find((component) =>
+      !component.name
+      || !['backend', 'frontend', 'database', 'service'].includes(component.serviceType)
+      || !component.command?.executable
+      || !Array.isArray(component.command.args)
+      || path.isAbsolute(component.relativePath)
+      || component.relativePath.split(/[\\/]/).includes('..')
+    );
+    if (invalidComponent) {
+      res.status(400).json({ error: 'A discovered component has an invalid command or relative path' });
+      return;
+    }
     const adapterCode = generateProcessAdapter(payload);
 
     res.setHeader('Content-Type', 'application/javascript');

@@ -13,6 +13,7 @@ export class ProjectController {
       const ticket = req.body.ticket;
       const host = req.body.host;
       const occupiedPorts = req.body.occupiedPorts;
+      const preferredPorts = req.body.preferredPorts;
       const clientInstanceId = req.body.clientInstanceId;
 
       if (!projectName || !projectPath) {
@@ -29,6 +30,7 @@ export class ProjectController {
         ticket,
         host,
         occupiedPorts,
+        preferredPorts,
         clientInstanceId
       );
 

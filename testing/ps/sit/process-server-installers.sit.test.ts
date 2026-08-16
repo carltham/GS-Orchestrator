@@ -9,8 +9,8 @@ describe('Process Server (:9999) - Installers SIT', () => {
     expect(contentType).toContain('text/x-shellscript');
 
     const text = await response.text();
-    expect(text).toContain('#!/usr/bin/env bash');
-    expect(text).toContain('ProcessAdapter.js');
+    expect(text).toContain('#!/bin/sh');
+    expect(text).toContain('/install.js');
   });
 
   test('GET /install.js returns valid Node.js inspector script', async () => {
@@ -27,7 +27,13 @@ describe('Process Server (:9999) - Installers SIT', () => {
       workspaceDir: '/tmp/test-workspace',
       projectName: 'TestProject',
       hasPackageJson: true,
-      startScript: 'npm start'
+      components: [{
+        name: 'backend',
+        relativePath: 'apps/backend',
+        serviceType: 'backend',
+        command: { executable: 'npm', args: ['run', 'dev'] },
+        configuredPort: 3000
+      }]
     };
 
     const response = await fetch(`${PROCESS_SERVER_URL}/ps/installer/generate`, {
@@ -41,6 +47,8 @@ describe('Process Server (:9999) - Installers SIT', () => {
 
     expect(code).toContain('class ProcessAdapter');
     expect(code).toContain('TestProject');
+    expect(code).toContain('apps/backend');
+    expect(code).toContain('componentDefinitions');
     expect(code).toContain('async start(ports = {})');
     expect(code).toContain('async stop()');
     expect(code).toContain('async getStatus()');

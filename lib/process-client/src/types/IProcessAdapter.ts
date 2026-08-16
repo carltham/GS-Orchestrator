@@ -14,6 +14,7 @@ export interface IProcessStatus {
 
 export interface IProcessAdapter {
   getServiceTypes?(): Record<string, string>;
+  getConfiguredPorts?(): Record<string, number>;
   start(ports?: { [key: string]: number }): Promise<void>;
   stop(): Promise<void>;
   getStatus(): Promise<IProcessStatus>;

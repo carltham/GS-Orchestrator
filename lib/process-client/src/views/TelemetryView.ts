@@ -24,6 +24,7 @@ export interface RegisterPayload {
   path: string;
   host?: HostInfo;
   serviceTypes: Record<string, string>;
+  preferredPorts?: Record<string, number>;
   occupiedPorts?: number[];
 }
 
@@ -53,6 +54,7 @@ export class TelemetryView {
       path: process.cwd(),
       host: detectHostInfo(),
       serviceTypes: serviceTypes || this.state.adapter?.getServiceTypes?.() || { backend: 'node-ts', frontend: 'angular' },
+      preferredPorts: this.state.adapter?.getConfiguredPorts?.(),
       occupiedPorts
     };
   }
